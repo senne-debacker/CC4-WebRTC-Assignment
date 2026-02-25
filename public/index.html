@@ -1,34 +1,277 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebRTC</title>
-  </head>
-  <body>
-    <h1>WebRTC</h1>
-    <video id="myVideo" autoplay playsinline></video>
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-      {
-        const $video = document.getElementById('myVideo');
-        let socket;
-
-        const init = async () => {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: true,
-          });
-          $video.srcObject = stream;
-
-          socket = io();
-          socket.on('connect', () => {
-            console.log('Connected');
-          });
-        };
-
-        init();
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebRTC Webcam Share</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h1 { text-align: center; margin-bottom: 20px; font-size: 1.4rem; }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .video-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 600px) {
+      .video-grid {
+        grid-template-columns: 1fr;
       }
-    </script>
-  </body>
+    }
+    .video-box {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+    .video-box h2 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+      color: #a8b2d1;
+    }
+    video {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      background: #000;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    label {
+      font-size: 0.9rem;
+      color: #a8b2d1;
+    }
+    select {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #16213e;
+      color: #eee;
+      font-size: 0.9rem;
+    }
+    .qr-section {
+      text-align: center;
+      background: #16213e;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .qr-section h2 {
+      font-size: 1rem;
+      color: #a8b2d1;
+      margin-bottom: 12px;
+    }
+    .qr-section p {
+      font-size: 0.85rem;
+      color: #7a8baa;
+      margin-top: 10px;
+      word-break: break-all;
+    }
+    #qrcode {
+      display: inline-block;
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .status {
+      text-align: center;
+      padding: 8px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+    }
+    .status.connected { background: #0f3460; color: #4cc9f0; }
+    .status.disconnected { background: #3d0000; color: #ff6b6b; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>WebRTC Webcam Share</h1>
+
+    <div id="statusBar" class="status disconnected">Connecting...</div>
+
+    <div class="qr-section">
+      <h2>Scan this QR code with your phone to connect</h2>
+      <div id="qrcode"></div>
+      <p id="urlDisplay"></p>
+    </div>
+
+    <div class="controls">
+      <label for="peerSelect">Peer:</label>
+      <select id="peerSelect">
+        <option value="none">--- Select Peer To Call ---</option>
+      </select>
+    </div>
+
+    <div class="video-grid">
+      <div class="video-box">
+        <h2>My Camera</h2>
+        <video id="myCamera" playsinline autoplay muted></video>
+      </div>
+      <div class="video-box">
+        <h2>Other Camera</h2>
+        <video id="otherCamera" playsinline autoplay></video>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js" integrity="sha512-0f7Ahsuvr+/P2btTY4mZIw9Vl23lS6LY/Y7amdkmUg2dqsUF+cTe4QjWvj/NIBHJoGksOiqndKQuI9yzn2hB0g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script type="module">
+
+    const $myCamera = document.getElementById('myCamera');
+    const $otherCamera = document.getElementById('otherCamera');
+    const $peerSelect = document.getElementById('peerSelect');
+    const $statusBar = document.getElementById('statusBar');
+
+    let socket;
+    let myStream;
+    let peer;
+
+    const generateQR = async () => {
+      try {
+        const res = await fetch('/api/ip');
+        const data = await res.json();
+        const url = data.url;
+        document.getElementById('urlDisplay').textContent = url;
+        new QRCode(document.getElementById('qrcode'), {
+          text: url,
+          width: 200,
+          height: 200,
+          colorDark: '#1a1a2e',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      } catch (e) {
+        console.error('Could not generate QR code:', e);
+        document.getElementById('urlDisplay').textContent = window.location.href;
+      }
+    };
+
+    const init = async () => {
+      generateQR();
+      initSocket();
+      $peerSelect.addEventListener('input', callSelectedPeer);
+      try {
+        const constraints = { audio: true, video: { width: 1280, height: 720, facingMode: 'user' } };
+        myStream = await navigator.mediaDevices.getUserMedia(constraints);
+        $myCamera.srcObject = myStream;
+      } catch (e) {
+        console.error('Could not access webcam:', e);
+        $statusBar.textContent = 'Error: Could not access webcam. Make sure you allow camera permissions.';
+        $statusBar.className = 'status disconnected';
+      }
+    };
+
+    const initSocket = () => {
+      socket = io.connect('/');
+      socket.on('connect', () => {
+        console.log('Connected:', socket.id);
+        $statusBar.textContent = `Connected — My ID: ${socket.id}`;
+        $statusBar.className = 'status connected';
+      });
+      socket.on('disconnect', () => {
+        $statusBar.textContent = 'Disconnected from server';
+        $statusBar.className = 'status disconnected';
+      });
+      socket.on('clients', updatePeerList);
+      socket.on('client-disconnect', (client) => {
+        if (peer && peer.data && peer.data.id === client.id) {
+          peer.destroy();
+          peer = null;
+          $otherCamera.srcObject = null;
+        }
+      });
+      socket.on('signal', async (myId, signal, peerId) => {
+        console.log(`Received signal from ${peerId}`);
+        if (peer) {
+          peer.signal(signal);
+        } else if (signal.type === 'offer') {
+          createPeer(false, peerId);
+          peer.signal(signal);
+        }
+      });
+    };
+
+    const updatePeerList = (clients) => {
+      $peerSelect.innerHTML = '<option value="none">--- Select Peer To Call ---</option>';
+      for (const clientId in clients) {
+        const isMyOwnId = (clientId === socket.id);
+        if (clients.hasOwnProperty(clientId) && !isMyOwnId) {
+          const $option = document.createElement('option');
+          $option.value = clientId;
+          $option.textContent = clientId;
+          $peerSelect.appendChild($option);
+        }
+      }
+
+      const otherPeers = Object.keys(clients).filter(id => id !== socket.id);
+      if (otherPeers.length === 1 && !peer) {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('auto')) {
+          $peerSelect.value = otherPeers[0];
+          callSelectedPeer();
+        }
+      }
+    };
+
+    const callSelectedPeer = async () => {
+      if ($peerSelect.value === 'none') {
+        if (peer) {
+          peer.destroy();
+          peer = null;
+          $otherCamera.srcObject = null;
+        }
+        return;
+      }
+      console.log('Calling peer:', $peerSelect.value);
+      createPeer(true, $peerSelect.value);
+    };
+
+    const createPeer = (initiator, peerId) => {
+      peer = new SimplePeer({ initiator, stream: myStream });
+      peer.data = { id: peerId };
+      peer.on('signal', data => {
+        socket.emit('signal', peerId, data);
+      });
+      peer.on('stream', stream => {
+        $otherCamera.srcObject = stream;
+      });
+      peer.on('close', () => {
+        console.log('Peer connection closed');
+        peer.destroy();
+        peer = null;
+        $otherCamera.srcObject = null;
+      });
+      peer.on('error', (err) => {
+        console.log('Peer error:', err);
+      });
+    };
+
+    $otherCamera.addEventListener('click', () => {
+      $otherCamera.play();
+    });
+
+    init();
+
+  </script>
+</body>
 </html>

@@ -4,7 +4,7 @@
   "description": "25-02-2026",
   "main": "index.js",
   "scripts": {
-    "start": "NODE_ENV=development node index.js"
+    "start": "node index.js"
   },
   "repository": {
     "type": "git",
@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/senne-debacker/CC4-WebRTC-Assignment#readme",
   "dependencies": {
+    "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "socket.io": "^4.8.3"
   }

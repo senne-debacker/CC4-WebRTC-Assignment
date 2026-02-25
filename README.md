@@ -36,4 +36,8 @@
 | **Description** | Continued following the tutorials on WebRTC. |
 | **AI Usage** | **Minimal** |
 
-
+#### 5. Finished Prototype
+| Section | Details |
+| :--- | :--- |
+| **Description** | Finished tutorial using Claude Opus, we now have a working prototype for a peer 2 peer connection where a webcam feedback is shared. |
+| **AI Usage** | **AI Generated** |
