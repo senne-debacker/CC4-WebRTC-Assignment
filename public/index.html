@@ -4,102 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WebRTC Webcam Share</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1a1a2e;
-      color: #eee;
-      min-height: 100vh;
-      padding: 20px;
-    }
-    h1 { text-align: center; margin-bottom: 20px; font-size: 1.4rem; }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-    }
-    .video-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-    @media (max-width: 600px) {
-      .video-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-    .video-box {
-      background: #16213e;
-      border-radius: 12px;
-      padding: 12px;
-      text-align: center;
-    }
-    .video-box h2 {
-      font-size: 1rem;
-      margin-bottom: 8px;
-      color: #a8b2d1;
-    }
-    video {
-      width: 100%;
-      height: auto;
-      border-radius: 8px;
-      background: #000;
-    }
-    .controls {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      justify-content: center;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-    label {
-      font-size: 0.9rem;
-      color: #a8b2d1;
-    }
-    select {
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 1px solid #333;
-      background: #16213e;
-      color: #eee;
-      font-size: 0.9rem;
-    }
-    .qr-section {
-      text-align: center;
-      background: #16213e;
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-    .qr-section h2 {
-      font-size: 1rem;
-      color: #a8b2d1;
-      margin-bottom: 12px;
-    }
-    .qr-section p {
-      font-size: 0.85rem;
-      color: #7a8baa;
-      margin-top: 10px;
-      word-break: break-all;
-    }
-    #qrcode {
-      display: inline-block;
-      background: white;
-      padding: 12px;
-      border-radius: 8px;
-    }
-    .status {
-      text-align: center;
-      padding: 8px;
-      border-radius: 8px;
-      margin-bottom: 16px;
-      font-size: 0.85rem;
-    }
-    .status.connected { background: #0f3460; color: #4cc9f0; }
-    .status.disconnected { background: #3d0000; color: #ff6b6b; }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="container">
@@ -129,6 +34,13 @@
         <h2>Other Camera</h2>
         <video id="otherCamera" playsinline autoplay></video>
       </div>
+    </div>
+
+    <div class="phone-data">
+      <h2>Phone Data</h2>
+      <ul>
+        <li></li>
+      </ul>
     </div>
   </div>
 
