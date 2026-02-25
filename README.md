@@ -18,7 +18,13 @@
 | **Description** | Initialized the local Git repository, created the remote on GitHub, and established the project folder structure. |
 | **AI Usage** | **Minimal** |
 
-#### 2. Followed tutorial: webrtc_03-webcam-local-https
+#### 2. Followed tutorial: webrtc_02-webcam-basic
+| Section | Details |
+| :--- | :--- |
+| **Description** | Implemented a basic webcam feedback on a local server. |
+| **AI Usage** | **Minimal** |
+
+#### 3. Followed tutorial: webrtc_03-webcam-local-https
 | Section | Details |
 | :--- | :--- |
 | **Description** | Implemented a local HTTPS environment to test webcam access, following the WebRTC_03 tutorial steps. |
