@@ -1,0 +1,24 @@
+{
+  "name": "cc4-webrtc-assignment",
+  "version": "1.0.0",
+  "description": "25-02-2026",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/senne-debacker/CC4-WebRTC-Assignment.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/senne-debacker/CC4-WebRTC-Assignment/issues"
+  },
+  "homepage": "https://github.com/senne-debacker/CC4-WebRTC-Assignment#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
