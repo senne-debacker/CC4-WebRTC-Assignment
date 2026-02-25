@@ -8,9 +8,11 @@
   <body>
     <h1>WebRTC</h1>
     <video id="myVideo" autoplay playsinline></video>
+    <script src="/socket.io/socket.io.js"></script>
     <script>
       {
         const $video = document.getElementById('myVideo');
+        let socket;
 
         const init = async () => {
           const stream = await navigator.mediaDevices.getUserMedia({
@@ -18,6 +20,11 @@
             video: true,
           });
           $video.srcObject = stream;
+
+          socket = io();
+          socket.on('connect', () => {
+            console.log('Connected');
+          });
         };
 
         init();

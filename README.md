@@ -30,4 +30,10 @@
 | **Description** | Implemented a local HTTPS environment to test webcam access, following the WebRTC_03 tutorial steps. |
 | **AI Usage** | **Minimal** |
 
+#### 4. Followed tutorial: webrtc_05-streaming-clients-list
+| Section | Details |
+| :--- | :--- |
+| **Description** | Continued following the tutorials on WebRTC. |
+| **AI Usage** | **Minimal** |
+
 
