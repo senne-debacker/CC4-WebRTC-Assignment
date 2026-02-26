@@ -76,3 +76,14 @@ Using camera
 | **Description** | Finished tutorial using Claude Opus, we now have a working prototype for a peer 2 peer connection where a webcam feedback is shared. |
 | **AI Usage** | **AI Generated** |
 
+### Day: 26-02-2026
+**Hours worked:** 
+**Copilot Premium Requests:** 
+**AI Reflection:** 
+
+#### 1. Requirements Check
+| Section | Details |
+| :--- | :--- |
+| **Description** | Used AI to scan the code and check for the requirements. Result: The requirement “Websockets are only used for the signalling layer” is met, but the requirement “uses WebRTC data channels for the controls” is not — controls are currently not implemented over data channels. |
+| **AI Usage** | **AI Consult** |
+
