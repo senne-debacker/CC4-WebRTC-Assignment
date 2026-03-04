@@ -1,0 +1,120 @@
+body {
+  padding: 16px;
+  background: #0d1b2a;
+}
+
+h1 span.tag {
+  display: inline-block;
+  font-size: 0.65rem;
+  background: #0a3d1f;
+  color: #2ecc71;
+  border-radius: 6px;
+  padding: 2px 8px;
+  vertical-align: middle;
+  margin-left: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.sender-wrap {
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.btn-controller {
+  width: 100%;
+  padding: 18px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #27ae60, #1e8449);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(46, 204, 113, 0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+  letter-spacing: 0.03em;
+}
+
+.btn-controller:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 10px rgba(46, 204, 113, 0.2);
+}
+
+.btn-controller:disabled {
+  background: #1a3a28;
+  color: #557a66;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btn-controller.active {
+  background: linear-gradient(135deg, #c0392b, #922b21);
+  box-shadow: 0 4px 18px rgba(192, 57, 43, 0.35);
+}
+
+.sensor-info {
+  background: #112233;
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 0.85rem;
+  color: #5a7a9a;
+  text-align: center;
+  display: none;
+}
+
+.sensor-info.visible {
+  display: block;
+  color: #2ecc71;
+}
+
+.tap-btn-wrap {
+  display: none;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.tap-btn-wrap.visible {
+  display: flex;
+}
+
+.tap-btn {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: none;
+  background: radial-gradient(circle at 40% 35%, #e74c3c, #922b21);
+  box-shadow: 0 6px 24px rgba(231, 76, 60, 0.5), inset 0 -4px 8px rgba(0,0,0,0.3);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.05em;
+  transition: transform 0.1s, box-shadow 0.1s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.tap-btn:active {
+  transform: scale(0.93);
+  box-shadow: 0 2px 10px rgba(231, 76, 60, 0.3);
+}
+
+.peer-info {
+  background: #112233;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  color: #5a7a9a;
+  text-align: center;
+}
+
+.peer-info.connected {
+  color: #2ecc71;
+  background: #0a2a1a;
+}

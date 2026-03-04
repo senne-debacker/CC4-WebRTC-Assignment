@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebRTC — Sender</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="sender.css" />
+  </head>
+  <body>
+    <div class="sender-wrap">
+      <h1>WebRTC <span class="tag">Sender</span></h1>
+
+      <div id="statusBar" class="status disconnected">Connecting to server…</div>
+
+      <div id="peerInfo" class="peer-info">Looking for a receiver…</div>
+
+      <button id="startSensorsBtn" class="btn-controller" disabled>
+        Start Controller Mode
+      </button>
+
+      <div id="sensorInfo" class="sensor-info">
+        Gyroscope &amp; accelerometer streaming ✓
+      </div>
+
+      <div id="tapBtnWrap" class="tap-btn-wrap">
+        <button id="tapBtn" class="tap-btn">TAP</button>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"
+      integrity="sha512-0f7Ahsuvr+/P2btTY4mZIw9Vl23lS6LY/Y7amdkmUg2dqsUF+cTe4QjWvj/NIBHJoGksOiqndKQuI9yzn2hB0g=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script type="module">
+      const $statusBar     = document.getElementById("statusBar");
+      const $startBtn      = document.getElementById("startSensorsBtn");
+      const $peerInfo      = document.getElementById("peerInfo");
+      const $sensorInfo    = document.getElementById("sensorInfo");
+      const $tapBtnWrap    = document.getElementById("tapBtnWrap");
+      const $tapBtn        = document.getElementById("tapBtn");
+
+      let socket, myStream, peer;
+      let sensorsActive = false;
+
+      const init = async () => {
+        try {
+          myStream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: { width: 1280, height: 720, facingMode: "environment" },
+          });
+        } catch (e) {
+          console.error("Could not access camera:", e);
+          $statusBar.textContent = "Warning: camera access denied — no video will be sent.";
+        }
+        initSocket();
+      };
+
+      const initSocket = () => {
+        socket = io.connect("/");
+
+        socket.on("connect", () => {
+          $statusBar.textContent = `Connected — My ID: ${socket.id}`;
+          $statusBar.className = "status connected";
+        });
+
+        socket.on("disconnect", () => {
+          $statusBar.textContent = "Disconnected from server";
+          $statusBar.className = "status disconnected";
+          setPeerInfo(null);
+        });
+
+        /* Auto-connect: pick the first available peer */
+        socket.on("clients", (clients) => {
+          const others = Object.keys(clients).filter((id) => id !== socket.id);
+          if (others.length > 0 && !peer) {
+            connectToPeer(others[0]);
+          } else if (others.length === 0 && !peer) {
+            setPeerInfo(null);
+          }
+        });
+
+        socket.on("client-disconnect", (client) => {
+          if (peer && peer.data && peer.data.id === client.id) {
+            peer.destroy();
+            peer = null;
+            setPeerInfo(null);
+            $startBtn.disabled = true;
+            $startBtn.textContent = "Start Controller Mode";
+            $startBtn.classList.remove("active");
+            $sensorInfo.classList.remove("visible");
+          }
+        });
+
+        socket.on("signal", (myId, signal, peerId) => {
+          if (peer) {
+            peer.signal(signal);
+          } else if (signal.type === "offer") {
+            createPeer(false, peerId);
+            peer.signal(signal);
+          }
+        });
+      };
+
+      const connectToPeer = (peerId) => {
+        $peerInfo.textContent = `Calling receiver…`;
+        $peerInfo.className = "peer-info";
+        createPeer(true, peerId);
+      };
+
+      const createPeer = (initiator, peerId) => {
+        if (peer) { peer.destroy(); }
+        peer = new SimplePeer({ initiator, stream: myStream });
+        peer.data = { id: peerId };
+
+        peer.on("signal", (data) => socket.emit("signal", peerId, data));
+
+        peer.on("connect", () => {
+          setPeerInfo(peerId);
+          $startBtn.disabled = false;
+        });
+
+        peer.on("stream", () => {/* Sender doesn't render remote stream */});
+
+        peer.on("close", () => {
+          peer.destroy();
+          peer = null;
+          setPeerInfo(null);
+          $startBtn.disabled = true;
+          $startBtn.textContent = "Start Controller Mode";
+          $startBtn.classList.remove("active");
+          $sensorInfo.classList.remove("visible");
+          $tapBtnWrap.classList.remove("visible");
+          sensorsActive = false;
+        });
+
+        peer.on("error", (err) => console.error("Peer error:", err));
+      };
+
+      const setPeerInfo = (peerId) => {
+        if (peerId) {
+          $peerInfo.textContent = `Connected to receiver ✓`;
+          $peerInfo.className = "peer-info connected";
+        } else {
+          $peerInfo.textContent = "Looking for a receiver…";
+          $peerInfo.className = "peer-info";
+        }
+      };
+
+      /* ── Controller / Sensor Button ── */
+      $startBtn.addEventListener("click", async () => {
+        if (sensorsActive) {
+          sensorsActive = false;
+          $startBtn.textContent = "Start Controller Mode";
+          $startBtn.classList.remove("active");
+          $sensorInfo.classList.remove("visible");
+          $tapBtnWrap.classList.remove("visible");
+          return;
+        }
+        await requestSensorPermission();
+      });
+
+      $tapBtn.addEventListener("click", () => {
+        if (peer && peer.connected) {
+          peer.send(JSON.stringify({ type: "button" }));
+        }
+      });
+
+      const requestSensorPermission = async () => {
+        if (
+          typeof DeviceOrientationEvent !== "undefined" &&
+          typeof DeviceOrientationEvent.requestPermission === "function"
+        ) {
+          const perm = await DeviceOrientationEvent.requestPermission();
+          if (perm === "granted") activateSensors();
+        } else {
+          activateSensors();
+        }
+      };
+
+      const activateSensors = () => {
+        sensorsActive = true;
+        $startBtn.textContent = "Stop Controller Mode";
+        $startBtn.classList.add("active");
+        $sensorInfo.classList.add("visible");
+        $tapBtnWrap.classList.add("visible");
+
+        let lastAccel = { ax: 0, ay: 0, az: 0 };
+
+        window.addEventListener("devicemotion", (event) => {
+          if (!sensorsActive) return;
+          // event.acceleration has gravity subtracted by the OS (linear acceleration).
+          // accelerationIncludingGravity always reads ~9.8 m/s² on the downward axis even at rest.
+          const a = event.acceleration;
+          if (a) {
+            lastAccel = {
+              ax: a.x?.toFixed(2) ?? 0,
+              ay: a.y?.toFixed(2) ?? 0,
+              az: a.z?.toFixed(2) ?? 0,
+            };
+          }
+        });
+
+        window.addEventListener("deviceorientation", (event) => {
+          if (!sensorsActive || !(peer && peer.connected)) return;
+          peer.send(JSON.stringify({
+            type: "gyro",
+            alpha: event.alpha?.toFixed(1) ?? 0,
+            beta:  event.beta?.toFixed(1)  ?? 0,
+            gamma: event.gamma?.toFixed(1) ?? 0,
+            ...lastAccel,
+          }));
+        });
+      };
+
+      init();
+    </script>
+  </body>
+</html>

@@ -272,15 +272,109 @@ Which of those should I do next?
 
 ### Day: 04-03-2026
 
-#### 1. 
+#### 1. Split index.html into sender.html and receiver.html
 | Section | Details |
 | :--- | :--- |
-| **Description** | Initialized the local Git repository, created the remote on GitHub, and established the project folder structure. |
-| **AI Usage** | **Minimal** |
+| **Description** | Like I was told, I split the index.html into a sender and a receiver, so both devices can have a different page. |
+| **AI Usage** | **AI Generated** |
 
 ##### Question 01
 **Input**
-/
+I want you to divide the index.html into a sender.html and a receiver.html, giving the two devices a different look, change the css too if nessecary
 
 **Return**
-/
+Let me read the current CSS before making changes.
+
+Now creating all three files simultaneously — receiver.html, sender.html, and the updated styles.css:
+
+Now updating styles.css and turning index.html into a redirect simultaneously:
+
+Now turning index.html into a redirect:
+
+The meta-refresh was injected into a large HTML body — let me replace the whole index.html cleanly:
+
+The head is correct but the old body remains. Let me write a clean minimal redirect file:
+
+cat > "/Users/s_backer/Documents/school/25-26/sem2/cc4/assignments/CC4-WebRTC-Assignment/public/index.html" << 'EOF'
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content="0; url=/receiver.html" />
+    <title>Redirecting…</title>
+  </head>
+  <body>
+    <p>Redirecting to <a href="/receiver.html">receiver</a>…</p>
+  </body>
+</html>
+EOF
+Done. Here's what changed:
+
+File	Role
+receiver.html	Laptop — desktop layout with 2-column sidebar (QR + sensor data on left, video grid + peer selector on right). Blue accent color.
+sender.html	Phone — mobile-first, single column. Shows camera preview, auto-connects to the first available receiver, and has a toggle "Start/Stop Controller Mode" button (green → red when active). Green accent color.
+styles.css	Shared base styles cleaned up and sharpened (borders, uppercase labels, tighter spacing). Page-specific styles live inline in each HTML file.
+index.html	Now a thin meta-refresh redirect to /receiver.html.
+Key behavioral differences from the old single page:
+
+Sender auto-connects — no dropdown needed, it just picks the first available peer as soon as it joins.
+QR code on receiver now points to /sender.html directly, so scanning it lands on the right page.
+Sender camera defaults to facingMode: "environment" (rear camera) instead of front, which makes more sense for a phone controller.
+
+#### 2. Adding accelerometer data and general improvements
+| Section | Details |
+| :--- | :--- |
+| **Description** | Adding the accelerometer data and deleting the receiver webcam, since it's unneccesary. |
+| **AI Usage** | **AI Generated** |
+
+##### Guestion 01
+**Input**
+Okay, couple of things for both parties:
+
+receiver.html:
+1. We don’t need the camera or microphone of this device, like ever. Please delete all code that enables this, in javascript, css and html of sender AND receiver
+
+sender.html:
+1. Right now, were registering the phones gyroscope data, and sending it to the receiver, I also want to register the accellerometer data and send it to the receiver (where it is displayed).
+
+2. Also add a small canvas/button to the screen, whenever this is pressed, the receiver notifies this
+
+**Return**
+Let me read both files in full before touching anything.
+
+Good, I have the full picture. Now I'll plan the changes:
+
+All receiver and sender changes in one batch:
+
+Two replacements had minor issues. Let me check the current file state to fix them:
+
+Good — the core logic applied correctly. Let me verify the HTML sections (btnFlash element in receiver, tapBtn in sender):
+
+I see duplicate elements from the multi-replacement inserting things twice. Let me check and clean both files:
+
+The btnFlash div is missing from the HTML — that replacement failed. Let me add it now, and also check for any stale $phoneDataList.innerHTML duplicate:
+
+I'll add the btnFlash element and clean up the duplicate $phoneDataList JS declaration:
+
+JS is clean. Just need to add the btnFlash HTML element:
+
+Now let me also verify the activateSensors function in sender.html doesn't have the duplicate gyro listener I accidentally introduced:
+
+There's the duplicate — remove the first (stale) deviceorientation listener that hardcodes ax: 0:
+
+All done. Here's a summary of every change:
+
+receiver.html
+
+Removed My Camera video box — only Sender Camera remains
+Removed all getUserMedia / myStream code
+SimplePeer no longer sends a local stream
+Sensor panel now shows 6 rows: Gyro α/β/γ + Accel X/Y/Z
+A 🔴 Button Pressed! flash banner (.btn-flash) appears for 1 s whenever the tap button is pressed, then disappears
+sender.html
+
+Removed the camera preview box entirely (HTML + CSS)
+Removed all getUserMedia / myStream code
+SimplePeer no longer sends a local stream
+activateSensors() now registers a devicemotion listener that tracks accelerationIncludingGravity and bundles it into every gyro message (ax, ay, az fields)
+A large round TAP button appears below the sensor toggle (styled like a game controller button, hidden until controller mode is active); pressing it sends { type: "button" } over the data channel

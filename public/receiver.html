@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebRTC — Receiver</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="receiver.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>WebRTC Webcam Share <span class="tag">Receiver</span></h1>
+
+      <div id="statusBar" class="status disconnected">Connecting…</div>
+
+      <div class="receiver-layout">
+        <!-- Sidebar: QR + Phone data -->
+        <div class="sidebar">
+          <div class="qr-section">
+            <h2>Scan to open Sender</h2>
+            <div id="qrcode"></div>
+            <p id="urlDisplay"></p>
+          </div>
+
+          <div class="phone-data">
+            <h2>Phone Sensors</h2>
+            <ul id="phoneDataList">
+              <li class="gyro-placeholder">No sensor data yet</li>
+            </ul>
+            <div id="btnFlash" class="btn-flash">🔴 Button Pressed!</div>
+          </div>
+        </div>
+
+        <!-- Main: peer select + videos -->
+        <div class="main-content">
+          <div class="peer-bar">
+            <label for="peerSelect">Connect to:</label>
+            <select id="peerSelect">
+              <option value="none">— Waiting for peers —</option>
+            </select>
+          </div>
+
+          <div class="video-wrap">
+            <div class="video-box">
+              <h2>Sender Camera</h2>
+              <video id="otherCamera" playsinline autoplay></video>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"
+      integrity="sha512-0f7Ahsuvr+/P2btTY4mZIw9Vl23lS6LY/Y7amdkmUg2dqsUF+cTe4QjWvj/NIBHJoGksOiqndKQuI9yzn2hB0g=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script type="module">
+      const $otherCamera   = document.getElementById("otherCamera");
+      const $peerSelect    = document.getElementById("peerSelect");
+      const $statusBar     = document.getElementById("statusBar");
+      const $phoneDataList = document.getElementById("phoneDataList");
+      const $btnFlash      = document.getElementById("btnFlash");
+
+      let socket, peer;
+      let flashTimer = null;
+
+      /* ── QR Code pointing to sender page ── */
+      const generateQR = async () => {
+        try {
+          const res  = await fetch("/api/ip");
+          const data = await res.json();
+          const url  = `${data.url}/sender.html`;
+          document.getElementById("urlDisplay").textContent = url;
+          new QRCode(document.getElementById("qrcode"), {
+            text: url,
+            width: 200,
+            height: 200,
+            colorDark: "#1a1a2e",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H,
+          });
+        } catch (e) {
+          console.error("Could not generate QR code:", e);
+          document.getElementById("urlDisplay").textContent =
+            window.location.origin + "/sender.html";
+        }
+      };
+
+      const init = () => {
+        generateQR();
+        initSocket();
+        $peerSelect.addEventListener("input", callSelectedPeer);
+      };
+
+      const initSocket = () => {
+        socket = io.connect("/");
+
+        socket.on("connect", () => {
+          $statusBar.textContent = `Connected — My ID: ${socket.id}`;
+          $statusBar.className = "status connected";
+        });
+
+        socket.on("disconnect", () => {
+          $statusBar.textContent = "Disconnected from server";
+          $statusBar.className = "status disconnected";
+        });
+
+        socket.on("clients", updatePeerList);
+
+        socket.on("client-disconnect", (client) => {
+          if (peer && peer.data && peer.data.id === client.id) {
+            peer.destroy();
+            peer = null;
+            $otherCamera.srcObject = null;
+          }
+        });
+
+        socket.on("signal", (myId, signal, peerId) => {
+          if (peer) {
+            peer.signal(signal);
+          } else if (signal.type === "offer") {
+            createPeer(false, peerId);
+            peer.signal(signal);
+          }
+        });
+      };
+
+      const updatePeerList = (clients) => {
+        $peerSelect.innerHTML =
+          '<option value="none">— Select Peer To Call —</option>';
+        for (const id in clients) {
+          if (id === socket.id) continue;
+          const $o = document.createElement("option");
+          $o.value = id;
+          $o.textContent = id;
+          $peerSelect.appendChild($o);
+        }
+      };
+
+      const callSelectedPeer = () => {
+        if ($peerSelect.value === "none") {
+          if (peer) { peer.destroy(); peer = null; $otherCamera.srcObject = null; }
+          return;
+        }
+        createPeer(true, $peerSelect.value);
+      };
+
+      const createPeer = (initiator, peerId) => {
+        if (peer) { peer.destroy(); }
+        peer = new SimplePeer({ initiator });
+        peer.data = { id: peerId };
+
+        peer.on("signal", (data) => socket.emit("signal", peerId, data));
+
+        peer.on("stream", (stream) => {
+          $otherCamera.srcObject = stream;
+        });
+
+        peer.on("data", (raw) => {
+          const msg = JSON.parse(raw);
+          if (msg.type === "gyro") {
+            $phoneDataList.innerHTML = `
+              <li><strong>Gyro α (Z):</strong> ${msg.alpha}°</li>
+              <li><strong>Gyro β (X):</strong> ${msg.beta}°</li>
+              <li><strong>Gyro γ (Y):</strong> ${msg.gamma}°</li>
+              <li><strong>Accel X:</strong> ${msg.ax} m/s²</li>
+              <li><strong>Accel Y:</strong> ${msg.ay} m/s²</li>
+              <li><strong>Accel Z:</strong> ${msg.az} m/s²</li>
+            `;
+          } else if (msg.type === "button") {
+            clearTimeout(flashTimer);
+            $btnFlash.classList.add("show");
+            flashTimer = setTimeout(() => $btnFlash.classList.remove("show"), 1000);
+          }
+        });
+
+        peer.on("close", () => {
+          peer.destroy();
+          peer = null;
+          $otherCamera.srcObject = null;
+        });
+
+        peer.on("error", (err) => console.error("Peer error:", err));
+      };
+
+      $otherCamera.addEventListener("click", () => $otherCamera.play());
+
+      init();
+    </script>
+  </body>
+</html>
