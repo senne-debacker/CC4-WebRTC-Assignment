@@ -122,3 +122,161 @@ h1 span.tag {
   from { transform: scale(1.08); opacity: 0.5; }
   to   { transform: scale(1);    opacity: 1; }
 }
+
+/* ── Hidden utility ── */
+.hidden {
+  display: none !important;
+}
+
+/* ── Start Game Button ── */
+.btn-start-game {
+  display: none;
+  width: 100%;
+  padding: 18px;
+  margin-top: 16px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #e67e22, #d35400);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(230, 126, 34, 0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+  letter-spacing: 0.03em;
+}
+
+.btn-start-game.visible {
+  display: block;
+}
+
+.btn-start-game:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 28px rgba(230, 126, 34, 0.55);
+}
+
+.btn-start-game:active {
+  transform: scale(0.97);
+}
+
+/* ── Game Screen ── */
+.game-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #0d1117;
+  z-index: 100;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-screen.active {
+  display: flex;
+}
+
+/* Game header */
+.game-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+}
+
+.game-score {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #f1c40f;
+  letter-spacing: 0.04em;
+}
+
+.game-round {
+  font-size: 1rem;
+  color: #8b949e;
+  font-weight: 600;
+}
+
+.btn-stop-game {
+  padding: 8px 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.12);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-stop-game:hover {
+  background: rgba(255, 107, 107, 0.25);
+}
+
+/* Command display */
+.command-display {
+  text-align: center;
+  padding: 0 24px;
+}
+
+.command-prefix {
+  font-size: 1.6rem;
+  color: #8b949e;
+  margin-bottom: 12px;
+  min-height: 2rem;
+  transition: color 0.3s;
+}
+
+.command-prefix.simon {
+  color: #f1c40f;
+  font-weight: 700;
+}
+
+.command-action {
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1.2;
+  text-shadow: 0 2px 20px rgba(255, 255, 255, 0.15);
+}
+
+/* Feedback */
+.feedback-display {
+  margin-top: 32px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  min-height: 2.2rem;
+  transition: color 0.2s;
+}
+
+.feedback-display.correct {
+  color: #2ecc71;
+}
+
+.feedback-display.wrong {
+  color: #e74c3c;
+}
+
+/* Camera PIP */
+.camera-pip {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 180px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+.camera-pip video {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+}

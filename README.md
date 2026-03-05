@@ -30,9 +30,13 @@ Using camera
 
 ## Planning
 
+### Week 01 
 **Monday:** test phone data like accelerometer and gyroscope
 **Tuesday:** start on basic html & think of more commands
 **Thursday:** add logic to show commands
+
+### Week 02
+///
 
 ## DevDiary
 
@@ -378,3 +382,80 @@ Removed all getUserMedia / myStream code
 SimplePeer no longer sends a local stream
 activateSensors() now registers a devicemotion listener that tracks accelerationIncludingGravity and bundles it into every gyro message (ax, ay, az fields)
 A large round TAP button appears below the sensor toggle (styled like a game controller button, hidden until controller mode is active); pressing it sends { type: "button" } over the data channel
+
+##### Question 01
+**Input**
+Now let’s change the appearance of both devices. I want this game to turn into simon says, the commands will display on the receiver, along with a small camera feedback in the corner. 
+
+We keep the current screen for the start, but we add a button on the receiver html to start the game.
+
+When the game is started, every 5 seconds a command appears, either preceded by “simon says“ or not. The commands are:
+- Touch the screen!
+- Jump!
+- Duck!
+- Do a 360!
+- Shake your phone!
+- Say something!
+
+**Return**
+Reading all three changed files to understand their current state.
+
+Summarized conversation history
+
+Now let me also read the shared CSS and sender CSS for full context.
+
+I have full context now. Let me implement the Simon Says game. Starting with the receiver HTML — I'll make several targeted edits: update the title, wrap content in a lobby div, add the game screen, and rewrite the script with game logic.
+
+Edited
+receiver.html+27-3
+Now replace the entire script section with game-aware logic:
+
+Now updating receiver.css with game screen styles:
+
+Now updating the sender with gesture detection (shake, jump, duck, spin), speech detection, and proper iOS dual-permission requests:
+
+Edited
+sender.html+18-7
+Now replace the activateSensors function with gesture detection + speech detection:
+
+All done. Here's what was implemented:
+
+Receiver (receiver.html):
+
+Lobby screen preserved with QR code, peer select, sensor data, and camera preview
+"Start Simon Says!" button appears once a peer connects
+Game screen overlays the full viewport with:
+Large centered command text (randomly from 6 commands)
+"Simon says…" prefix shown randomly (~50%)
+Score + round counter in the top bar
+Feedback after each round (correct/wrong)
+Camera PIP in the bottom-right corner
+"End Game" button to return to lobby
+Commands cycle every 5 seconds (+ 2s feedback gap)
+Sender (sender.html):
+
+Gesture detection restored with state machines:
+Shake: linear acceleration X/Y > 10 m/s²
+Jump: accelerationIncludingGravity Z freefall→impact
+Duck: beta tilt > 45° held 300ms
+360 Spin: alpha accumulation ≥ 360° in 2s
+Speech detection added via Web Audio API (analyser node on mic stream)
+iOS dual permissions (DeviceOrientationEvent + DeviceMotionEvent)
+1s global cooldown between gestures
+Tap button still sends "tap" for "Touch the screen!"
+6 Simon Says commands: Touch the screen!, Jump!, Duck!, Do a 360!, Shake your phone!, Say something!
+
+### Day: 05-03-2026
+
+#### X. Template
+| Section | Details |
+| :--- | :--- |
+| **Description** | Description of the changes made. |
+| **AI Usage** | **Minimal** |
+
+##### Guestion 01
+**Input**
+AI prompt
+
+**Return**
+AI answer

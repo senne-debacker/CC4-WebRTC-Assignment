@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebRTC — Receiver</title>
+    <title>Simon Says — Receiver</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="receiver.css" />
   </head>
   <body>
-    <div class="container">
-      <h1>WebRTC Webcam Share <span class="tag">Receiver</span></h1>
+    <div id="lobbyScreen" class="container">
+      <h1>Simon Says <span class="tag">Receiver</span></h1>
 
       <div id="statusBar" class="status disconnected">Connecting…</div>
 
@@ -46,7 +46,31 @@
               <video id="otherCamera" playsinline autoplay></video>
             </div>
           </div>
+
+          <button id="startGameBtn" class="btn-start-game">
+            Start Simon Says!
+          </button>
         </div>
+      </div>
+    </div>
+
+    <!-- ── GAME SCREEN ── -->
+    <div id="gameScreen" class="game-screen">
+      <div class="game-header">
+        <div id="gameScore" class="game-score">Score: 0</div>
+        <div id="gameRound" class="game-round"></div>
+        <button id="stopGameBtn" class="btn-stop-game">End Game</button>
+      </div>
+
+      <div class="command-display">
+        <div id="commandPrefix" class="command-prefix"></div>
+        <div id="commandAction" class="command-action">Get Ready…</div>
+      </div>
+
+      <div id="feedbackDisplay" class="feedback-display"></div>
+
+      <div class="camera-pip">
+        <video id="pipCamera" playsinline autoplay muted></video>
       </div>
     </div>
 
@@ -59,16 +83,46 @@
     ></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script type="module">
-      const $otherCamera   = document.getElementById("otherCamera");
-      const $peerSelect    = document.getElementById("peerSelect");
-      const $statusBar     = document.getElementById("statusBar");
-      const $phoneDataList = document.getElementById("phoneDataList");
-      const $btnFlash      = document.getElementById("btnFlash");
+      /* ── DOM refs ── */
+      const $otherCamera    = document.getElementById("otherCamera");
+      const $peerSelect     = document.getElementById("peerSelect");
+      const $statusBar      = document.getElementById("statusBar");
+      const $phoneDataList  = document.getElementById("phoneDataList");
+      const $btnFlash       = document.getElementById("btnFlash");
+      const $startGameBtn   = document.getElementById("startGameBtn");
+      const $stopGameBtn    = document.getElementById("stopGameBtn");
+      const $lobbyScreen    = document.getElementById("lobbyScreen");
+      const $gameScreen     = document.getElementById("gameScreen");
+      const $commandPrefix  = document.getElementById("commandPrefix");
+      const $commandAction  = document.getElementById("commandAction");
+      const $feedbackDisplay = document.getElementById("feedbackDisplay");
+      const $gameScore      = document.getElementById("gameScore");
+      const $gameRound      = document.getElementById("gameRound");
+      const $pipCamera      = document.getElementById("pipCamera");
 
       let socket, peer;
       let flashTimer = null;
 
-      /* ── QR Code pointing to sender page ── */
+      /* ── Game State ── */
+      const COMMANDS = [
+        { text: "Touch the screen!", gesture: "tap" },
+        { text: "Jump!", gesture: "jump" },
+        { text: "Duck!", gesture: "duck" },
+        { text: "Do a 360!", gesture: "spin" },
+        { text: "Shake your phone!", gesture: "shake" },
+        { text: "Say something!", gesture: "speech" },
+      ];
+
+      let gameActive = false;
+      let commandTimer = null;
+      let roundTimer = null;
+      let score = 0;
+      let round = 0;
+      let currentCommand = null;
+      let simonSays = false;
+      let actionPerformed = false;
+
+      /* ── QR Code ── */
       const generateQR = async () => {
         try {
           const res  = await fetch("/api/ip");
@@ -76,11 +130,8 @@
           const url  = `${data.url}/sender.html`;
           document.getElementById("urlDisplay").textContent = url;
           new QRCode(document.getElementById("qrcode"), {
-            text: url,
-            width: 200,
-            height: 200,
-            colorDark: "#1a1a2e",
-            colorLight: "#ffffff",
+            text: url, width: 200, height: 200,
+            colorDark: "#1a1a2e", colorLight: "#ffffff",
             correctLevel: QRCode.CorrectLevel.H,
           });
         } catch (e) {
@@ -94,8 +145,11 @@
         generateQR();
         initSocket();
         $peerSelect.addEventListener("input", callSelectedPeer);
+        $startGameBtn.addEventListener("click", startGame);
+        $stopGameBtn.addEventListener("click", stopGame);
       };
 
+      /* ── Socket.io ── */
       const initSocket = () => {
         socket = io.connect("/");
 
@@ -116,6 +170,9 @@
             peer.destroy();
             peer = null;
             $otherCamera.srcObject = null;
+            $pipCamera.srcObject = null;
+            $startGameBtn.classList.remove("visible");
+            if (gameActive) stopGame();
           }
         });
 
@@ -144,6 +201,7 @@
       const callSelectedPeer = () => {
         if ($peerSelect.value === "none") {
           if (peer) { peer.destroy(); peer = null; $otherCamera.srcObject = null; }
+          $startGameBtn.classList.remove("visible");
           return;
         }
         createPeer(true, $peerSelect.value);
@@ -156,38 +214,133 @@
 
         peer.on("signal", (data) => socket.emit("signal", peerId, data));
 
+        peer.on("connect", () => {
+          $startGameBtn.classList.add("visible");
+        });
+
         peer.on("stream", (stream) => {
           $otherCamera.srcObject = stream;
+          $pipCamera.srcObject = stream;
         });
 
         peer.on("data", (raw) => {
           const msg = JSON.parse(raw);
-          if (msg.type === "gyro") {
-            $phoneDataList.innerHTML = `
-              <li><strong>Gyro α (Z):</strong> ${msg.alpha}°</li>
-              <li><strong>Gyro β (X):</strong> ${msg.beta}°</li>
-              <li><strong>Gyro γ (Y):</strong> ${msg.gamma}°</li>
-              <li><strong>Accel X:</strong> ${msg.ax} m/s²</li>
-              <li><strong>Accel Y:</strong> ${msg.ay} m/s²</li>
-              <li><strong>Accel Z:</strong> ${msg.az} m/s²</li>
-            `;
-          } else if (msg.type === "button") {
-            clearTimeout(flashTimer);
-            $btnFlash.classList.add("show");
-            flashTimer = setTimeout(() => $btnFlash.classList.remove("show"), 1000);
-          }
+          handlePeerMessage(msg);
         });
 
         peer.on("close", () => {
           peer.destroy();
           peer = null;
           $otherCamera.srcObject = null;
+          $pipCamera.srcObject = null;
+          $startGameBtn.classList.remove("visible");
+          if (gameActive) stopGame();
         });
 
         peer.on("error", (err) => console.error("Peer error:", err));
       };
 
+      /* ── Message handling ── */
+      const handlePeerMessage = (msg) => {
+        if (msg.type === "gyro") {
+          $phoneDataList.innerHTML = `
+            <li><strong>Gyro α (Z):</strong> ${msg.alpha}°</li>
+            <li><strong>Gyro β (X):</strong> ${msg.beta}°</li>
+            <li><strong>Gyro γ (Y):</strong> ${msg.gamma}°</li>
+            <li><strong>Accel X:</strong> ${msg.ax} m/s²</li>
+            <li><strong>Accel Y:</strong> ${msg.ay} m/s²</li>
+            <li><strong>Accel Z:</strong> ${msg.az} m/s²</li>
+          `;
+        } else if (msg.type === "button") {
+          clearTimeout(flashTimer);
+          $btnFlash.classList.add("show");
+          flashTimer = setTimeout(() => $btnFlash.classList.remove("show"), 1000);
+          if (gameActive) handleGameAction("tap");
+        } else if (msg.type === "gesture") {
+          if (gameActive) handleGameAction(msg.gesture);
+        }
+      };
+
+      /* ── Game Logic ── */
+      const startGame = () => {
+        gameActive = true;
+        score = 0;
+        round = 0;
+        $lobbyScreen.classList.add("hidden");
+        $gameScreen.classList.add("active");
+        $commandAction.textContent = "Get Ready…";
+        $commandPrefix.textContent = "";
+        $feedbackDisplay.textContent = "";
+        $feedbackDisplay.className = "feedback-display";
+        $gameScore.textContent = "Score: 0";
+        $gameRound.textContent = "";
+
+        commandTimer = setTimeout(nextCommand, 2000);
+      };
+
+      const nextCommand = () => {
+        round++;
+        actionPerformed = false;
+
+        const cmd = COMMANDS[Math.floor(Math.random() * COMMANDS.length)];
+        simonSays = Math.random() >= 0.5;
+        currentCommand = cmd;
+
+        $commandPrefix.textContent = simonSays ? "Simon says…" : "";
+        $commandPrefix.className = simonSays
+          ? "command-prefix simon" : "command-prefix";
+        $commandAction.textContent = cmd.text;
+        $gameRound.textContent = `Round ${round}`;
+        $gameScore.textContent = `Score: ${score}`;
+        $feedbackDisplay.textContent = "";
+        $feedbackDisplay.className = "feedback-display";
+
+        roundTimer = setTimeout(() => {
+          if (!gameActive) return;
+          if (simonSays && !actionPerformed) {
+            showFeedback("Too slow! 😴", "wrong");
+          } else if (!simonSays && !actionPerformed) {
+            score++;
+            showFeedback("Correct! You resisted! +1 ✓", "correct");
+          }
+          $gameScore.textContent = `Score: ${score}`;
+          commandTimer = setTimeout(nextCommand, 2000);
+        }, 5000);
+      };
+
+      const handleGameAction = (gesture) => {
+        if (!gameActive || !currentCommand || actionPerformed) return;
+        actionPerformed = true;
+
+        if (gesture === currentCommand.gesture) {
+          if (simonSays) {
+            score++;
+            showFeedback("Correct! +1 ✓", "correct");
+          } else {
+            score = Math.max(0, score - 1);
+            showFeedback("Simon didn't say! −1 ✗", "wrong");
+          }
+        } else {
+          showFeedback("Wrong action!", "wrong");
+        }
+        $gameScore.textContent = `Score: ${score}`;
+      };
+
+      const showFeedback = (text, type) => {
+        $feedbackDisplay.textContent = text;
+        $feedbackDisplay.className = `feedback-display ${type}`;
+      };
+
+      const stopGame = () => {
+        gameActive = false;
+        clearTimeout(commandTimer);
+        clearTimeout(roundTimer);
+        $lobbyScreen.classList.remove("hidden");
+        $gameScreen.classList.remove("active");
+      };
+
       $otherCamera.addEventListener("click", () => $otherCamera.play());
+      $pipCamera.addEventListener("click", () => $pipCamera.play());
 
       init();
     </script>

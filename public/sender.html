@@ -170,13 +170,24 @@
       });
 
       const requestSensorPermission = async () => {
-        if (
-          typeof DeviceOrientationEvent !== "undefined" &&
-          typeof DeviceOrientationEvent.requestPermission === "function"
-        ) {
-          const perm = await DeviceOrientationEvent.requestPermission();
-          if (perm === "granted") activateSensors();
-        } else {
+        try {
+          if (
+            typeof DeviceOrientationEvent !== "undefined" &&
+            typeof DeviceOrientationEvent.requestPermission === "function"
+          ) {
+            const p1 = await DeviceOrientationEvent.requestPermission();
+            if (p1 !== "granted") return;
+          }
+          if (
+            typeof DeviceMotionEvent !== "undefined" &&
+            typeof DeviceMotionEvent.requestPermission === "function"
+          ) {
+            const p2 = await DeviceMotionEvent.requestPermission();
+            if (p2 !== "granted") return;
+          }
+          activateSensors();
+        } catch (e) {
+          console.error("Sensor permission error:", e);
           activateSensors();
         }
       };
@@ -190,11 +201,59 @@
 
         let lastAccel = { ax: 0, ay: 0, az: 0 };
 
+        /* ── Gesture detection state ── */
+        let lastGestureTime = 0;
+        const COOLDOWN = 1500;
+
+        const sendGesture = (gesture) => {
+          const now = Date.now();
+          if (now - lastGestureTime < COOLDOWN) return;
+          lastGestureTime = now;
+          if (peer && peer.connected) {
+            peer.send(JSON.stringify({ type: "gesture", gesture }));
+          }
+        };
+
+        /* ─── Shake ───
+           Require 4+ direction reversals in X or Y within a 1.2 s window.
+           A reversal = acceleration crosses zero with magnitude > 6 on each side. */
+        let shakeReversals = 0;
+        let shakeWindowStart = 0;
+        let shakeLastSign = 0; // −1 or +1
+        const SHAKE_THRESH = 6;
+        const SHAKE_REVERSALS_NEEDED = 4;
+        const SHAKE_WINDOW = 1200; // ms
+
+        /* ─── Jump ───
+           3-phase: push-off (Z accelIncGrav > 14) → freefall (Z < 3) → land (Z > 14)
+           Must complete all 3 within 1.5 s. */
+        let jumpPhase = "idle"; // idle → push → freefall → (land fires)
+        let jumpStart = 0;
+        const JUMP_TIMEOUT = 1500;
+
+        /* ─── Duck ───
+           Tilt phone face-down (beta > 60°) for at least 500 ms,
+           then return upright (beta < 25°). Fires on the return. */
+        let duckPhase = "idle"; // idle → tilted → (return fires)
+        let duckTiltStart = 0;
+        const DUCK_TILT_ANGLE = 60;
+        const DUCK_HOLD_MS = 500;
+        const DUCK_RETURN_ANGLE = 25;
+
+        /* ─── 360 Spin ───
+           Accumulate ≥ 350° of alpha rotation within a 3 s window.
+           Must be mostly in ONE direction (net, not just absolute). */
+        let spinAccum = 0;
+        let lastAlpha = null;
+        let spinStart = 0;
+        const SPIN_WINDOW = 3000;
+        const SPIN_THRESHOLD = 350;
+
+        /* ── Device Motion (acceleration) ── */
         window.addEventListener("devicemotion", (event) => {
           if (!sensorsActive) return;
-          // event.acceleration has gravity subtracted by the OS (linear acceleration).
-          // accelerationIncludingGravity always reads ~9.8 m/s² on the downward axis even at rest.
-          const a = event.acceleration;
+
+          const a = event.acceleration || event.accelerationIncludingGravity;
           if (a) {
             lastAccel = {
               ax: a.x?.toFixed(2) ?? 0,
@@ -202,10 +261,64 @@
               az: a.z?.toFixed(2) ?? 0,
             };
           }
+
+          /* ── Shake detection ── */
+          const linAccel = event.acceleration;
+          if (linAccel) {
+            // Use whichever lateral axis has the biggest value
+            const val = Math.abs(linAccel.x || 0) > Math.abs(linAccel.y || 0)
+              ? (linAccel.x || 0) : (linAccel.y || 0);
+            const sign = val > SHAKE_THRESH ? 1 : val < -SHAKE_THRESH ? -1 : 0;
+
+            if (sign !== 0 && sign !== shakeLastSign) {
+              const now = Date.now();
+              if (shakeLastSign === 0 || now - shakeWindowStart > SHAKE_WINDOW) {
+                // Start a new window
+                shakeReversals = 1;
+                shakeWindowStart = now;
+              } else {
+                shakeReversals++;
+              }
+              shakeLastSign = sign;
+
+              if (shakeReversals >= SHAKE_REVERSALS_NEEDED) {
+                sendGesture("shake");
+                shakeReversals = 0;
+                shakeLastSign = 0;
+              }
+            }
+          }
+
+          /* ── Jump detection (3-phase) ── */
+          const aig = event.accelerationIncludingGravity;
+          if (aig && aig.z !== null) {
+            const az = Math.abs(aig.z);
+            const now = Date.now();
+
+            if (jumpPhase !== "idle" && now - jumpStart > JUMP_TIMEOUT) {
+              jumpPhase = "idle"; // timed out
+            }
+
+            if (jumpPhase === "idle" && az > 14) {
+              // Phase 1: push-off detected (legs push, phone goes up with high G)
+              jumpPhase = "push";
+              jumpStart = now;
+            } else if (jumpPhase === "push" && az < 3) {
+              // Phase 2: freefall at apex (near-weightless)
+              jumpPhase = "freefall";
+            } else if (jumpPhase === "freefall" && az > 14) {
+              // Phase 3: landing impact
+              jumpPhase = "idle";
+              sendGesture("jump");
+            }
+          }
         });
 
+        /* ── Device Orientation (gyro + duck + spin) ── */
         window.addEventListener("deviceorientation", (event) => {
           if (!sensorsActive || !(peer && peer.connected)) return;
+
+          // Send raw telemetry
           peer.send(JSON.stringify({
             type: "gyro",
             alpha: event.alpha?.toFixed(1) ?? 0,
@@ -213,7 +326,74 @@
             gamma: event.gamma?.toFixed(1) ?? 0,
             ...lastAccel,
           }));
+
+          /* ── Duck detection (tilt → hold → return) ── */
+          const beta = event.beta ?? 0;
+          if (duckPhase === "idle" && beta > DUCK_TILT_ANGLE) {
+            duckPhase = "tilted";
+            duckTiltStart = Date.now();
+          } else if (duckPhase === "tilted") {
+            if (beta <= DUCK_TILT_ANGLE) {
+              duckPhase = "idle"; // released too early
+            } else if (Date.now() - duckTiltStart >= DUCK_HOLD_MS) {
+              duckPhase = "held"; // held long enough, wait for return
+            }
+          } else if (duckPhase === "held") {
+            if (beta < DUCK_RETURN_ANGLE) {
+              duckPhase = "idle";
+              sendGesture("duck");
+            }
+          }
+
+          /* ── 360 Spin (directional accumulation) ── */
+          const alpha = event.alpha ?? 0;
+          if (lastAlpha !== null) {
+            let delta = alpha - lastAlpha;
+            if (delta > 180) delta -= 360;
+            if (delta < -180) delta += 360;
+            const now = Date.now();
+            if (now - spinStart > SPIN_WINDOW) {
+              spinAccum = 0;
+              spinStart = now;
+            }
+            // Net accumulation preserves direction
+            spinAccum += delta;
+            if (Math.abs(spinAccum) >= SPIN_THRESHOLD) {
+              sendGesture("spin");
+              spinAccum = 0;
+              spinStart = now;
+            }
+          }
+          lastAlpha = alpha;
         });
+
+        /* ── Speech detection (audio level) ── */
+        if (myStream) {
+          try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioCtx.createMediaStreamSource(myStream);
+            const analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+            const dataArr = new Uint8Array(analyser.frequencyBinCount);
+            let speaking = false;
+
+            const checkAudio = () => {
+              if (!sensorsActive) return;
+              analyser.getByteFrequencyData(dataArr);
+              const avg = dataArr.reduce((a, b) => a + b, 0) / dataArr.length;
+              if (avg > 25 && !speaking) {
+                speaking = true;
+                sendGesture("speech");
+                setTimeout(() => { speaking = false; }, 2000);
+              }
+              requestAnimationFrame(checkAudio);
+            };
+            checkAudio();
+          } catch (e) {
+            console.error("Audio detection setup failed:", e);
+          }
+        }
       };
 
       init();
