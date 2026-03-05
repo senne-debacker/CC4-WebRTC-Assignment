@@ -3,17 +3,32 @@ body {
   background: #0d1b2a;
 }
 
-h1 span.tag {
-  display: inline-block;
-  font-size: 0.65rem;
-  background: #0a3d1f;
-  color: #2ecc71;
-  border-radius: 6px;
-  padding: 2px 8px;
-  vertical-align: middle;
-  margin-left: 8px;
-  letter-spacing: 0.06em;
+/* ── Sender hero ── */
+.sender-hero {
+  text-align: center;
+  padding: 24px 0 8px;
+}
+
+.sender-icon {
+  font-size: 3rem;
+  margin-bottom: 4px;
+}
+
+.sender-title {
+  font-size: 2rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 2px;
+}
+
+.sender-subtitle {
+  font-size: 0.9rem;
+  color: #5a7a9a;
   text-transform: uppercase;
+  letter-spacing: 0.12em;
   font-weight: 600;
 }
 

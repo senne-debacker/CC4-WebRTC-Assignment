@@ -36,7 +36,11 @@ Using camera
 **Thursday:** add logic to show commands
 
 ### Week 02
-///
+| Dag | Focus | Taken |
+| :--- | :--- | :--- |
+| **Maandag** | **Sensor Tuning & UX** | Finetunen van drempelwaarden voor Jump/360 op fysieke hardware; Toevoegen van haptische feedback (vibratie) op de smartphone. |
+| **Dinsdag** | **Visuals & AI Rainbow** | HTML verder uitwerken om tot een volledig spel te komen met startscherm etc. |
+| **Donderdag** | **Robustness & Final Review** | Foutafhandeling optimaliseren (reconnect logica), opties toevoegen voor kalibratie en troubleshooting. |
 
 ## DevDiary
 
@@ -446,6 +450,27 @@ Tap button still sends "tap" for "Touch the screen!"
 6 Simon Says commands: Touch the screen!, Jump!, Duck!, Do a 360!, Shake your phone!, Say something!
 
 ### Day: 05-03-2026
+
+#### 1. Finetuning timing and other details
+| Section | Details |
+| :--- | :--- |
+| **Description** | Finetuning the game for measuring the movements. |
+| **AI Usage** | **Copilot** |
+
+##### Guestion 01
+**Input**
+Instead of the game saying "Wrong action", i want it to say "You did ..., that's wrong!", also reduce the time per level from 5 seconds to 3
+
+**Return**
+I'll update the receiver's game script to show the performed action in the wrong-message and shorten each round from 5s to 3s. Applying two small edits to receiver.html.
+
+Patching receiver.html to (1) shorten round duration to 3s and (2) update wrong-action message to include the performed action label.
+
+Done — two changes applied:
+
+Round timeout reduced from 5000ms → 3000ms.
+Incorrect-action message now says: "You did <action>, that's wrong!" (uses the command text when available).
+Would you like the game to also speak the command or show a brief animation when a round starts?
 
 #### X. Template
 | Section | Details |

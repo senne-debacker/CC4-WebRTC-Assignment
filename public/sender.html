@@ -3,13 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebRTC — Sender</title>
+    <title>Simon Says — Controller</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="sender.css" />
   </head>
   <body>
     <div class="sender-wrap">
-      <h1>WebRTC <span class="tag">Sender</span></h1>
+      <div class="sender-hero">
+        <div class="sender-icon">🎮</div>
+        <h1 class="sender-title">Simon Says</h1>
+        <p class="sender-subtitle">Controller</p>
+      </div>
 
       <div id="statusBar" class="status disconnected">Connecting to server…</div>
 
@@ -20,7 +24,7 @@
       </button>
 
       <div id="sensorInfo" class="sensor-info">
-        Gyroscope &amp; accelerometer streaming ✓
+        Sensors active — follow the screen!
       </div>
 
       <div id="tapBtnWrap" class="tap-btn-wrap">
@@ -224,21 +228,20 @@
         const SHAKE_REVERSALS_NEEDED = 4;
         const SHAKE_WINDOW = 1200; // ms
 
-        /* ─── Jump ───
-           3-phase: push-off (Z accelIncGrav > 14) → freefall (Z < 3) → land (Z > 14)
-           Must complete all 3 within 1.5 s. */
-        let jumpPhase = "idle"; // idle → push → freefall → (land fires)
-        let jumpStart = 0;
-        const JUMP_TIMEOUT = 1500;
+        /* ─── Jump & Duck (unified vertical motion) ───
+           Uses total magnitude of accelerationIncludingGravity
+           so it works regardless of how the phone is held.
+           Rest ≈ 9.8 m/s².  Freefall → ~0.  Impact → 15+.
 
-        /* ─── Duck ───
-           Tilt phone face-down (beta > 60°) for at least 500 ms,
-           then return upright (beta < 25°). Fires on the return. */
-        let duckPhase = "idle"; // idle → tilted → (return fires)
-        let duckTiltStart = 0;
-        const DUCK_TILT_ANGLE = 60;
-        const DUCK_HOLD_MS = 500;
-        const DUCK_RETURN_ANGLE = 25;
+           Jump:  HIGH first (push-off) → LOW (freefall) → HIGH (land)
+           Duck:  LOW first (body drops) → HIGH (stop at bottom)
+
+           A single state machine so they can never conflict. */
+        let verticalPhase = "idle";
+        let verticalStart = 0;
+        const VERTICAL_TIMEOUT = 1500;
+        const VERT_HIGH = 14;  // magnitude threshold for impact / push-off
+        const VERT_LOW  = 5;   // magnitude threshold for freefall / drop
 
         /* ─── 360 Spin ───
            Accumulate ≥ 350° of alpha rotation within a 3 s window.
@@ -289,27 +292,46 @@
             }
           }
 
-          /* ── Jump detection (3-phase) ── */
+          /* ── Jump / Duck (unified magnitude detector) ── */
           const aig = event.accelerationIncludingGravity;
-          if (aig && aig.z !== null) {
-            const az = Math.abs(aig.z);
+          if (aig) {
+            const mag = Math.sqrt(
+              (aig.x || 0) ** 2 + (aig.y || 0) ** 2 + (aig.z || 0) ** 2
+            );
             const now = Date.now();
 
-            if (jumpPhase !== "idle" && now - jumpStart > JUMP_TIMEOUT) {
-              jumpPhase = "idle"; // timed out
+            // Timeout → reset
+            if (verticalPhase !== "idle" && now - verticalStart > VERTICAL_TIMEOUT) {
+              verticalPhase = "idle";
             }
 
-            if (jumpPhase === "idle" && az > 14) {
-              // Phase 1: push-off detected (legs push, phone goes up with high G)
-              jumpPhase = "push";
-              jumpStart = now;
-            } else if (jumpPhase === "push" && az < 3) {
-              // Phase 2: freefall at apex (near-weightless)
-              jumpPhase = "freefall";
-            } else if (jumpPhase === "freefall" && az > 14) {
-              // Phase 3: landing impact
-              jumpPhase = "idle";
-              sendGesture("jump");
+            switch (verticalPhase) {
+              case "idle":
+                if (mag > VERT_HIGH) {
+                  // High G first → jump push-off
+                  verticalPhase = "jump-push";
+                  verticalStart = now;
+                } else if (mag < VERT_LOW) {
+                  // Low G first → duck drop
+                  verticalPhase = "duck-drop";
+                  verticalStart = now;
+                }
+                break;
+              case "jump-push":
+                if (mag < VERT_LOW) verticalPhase = "jump-freefall";
+                break;
+              case "jump-freefall":
+                if (mag > VERT_HIGH) {
+                  verticalPhase = "idle";
+                  sendGesture("jump");
+                }
+                break;
+              case "duck-drop":
+                if (mag > VERT_HIGH) {
+                  verticalPhase = "idle";
+                  sendGesture("duck");
+                }
+                break;
             }
           }
         });
@@ -326,24 +348,6 @@
             gamma: event.gamma?.toFixed(1) ?? 0,
             ...lastAccel,
           }));
-
-          /* ── Duck detection (tilt → hold → return) ── */
-          const beta = event.beta ?? 0;
-          if (duckPhase === "idle" && beta > DUCK_TILT_ANGLE) {
-            duckPhase = "tilted";
-            duckTiltStart = Date.now();
-          } else if (duckPhase === "tilted") {
-            if (beta <= DUCK_TILT_ANGLE) {
-              duckPhase = "idle"; // released too early
-            } else if (Date.now() - duckTiltStart >= DUCK_HOLD_MS) {
-              duckPhase = "held"; // held long enough, wait for return
-            }
-          } else if (duckPhase === "held") {
-            if (beta < DUCK_RETURN_ANGLE) {
-              duckPhase = "idle";
-              sendGesture("duck");
-            }
-          }
 
           /* ── 360 Spin (directional accumulation) ── */
           const alpha = event.alpha ?? 0;
@@ -367,32 +371,46 @@
           lastAlpha = alpha;
         });
 
-        /* ── Speech detection (audio level) ── */
+        /* ── Speech detection (RMS of waveform) ── */
         if (myStream) {
-          try {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioCtx.createMediaStreamSource(myStream);
-            const analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 256;
-            source.connect(analyser);
-            const dataArr = new Uint8Array(analyser.frequencyBinCount);
-            let speaking = false;
+          (async () => {
+            try {
+              const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+              await audioCtx.resume();  // must await — iOS keeps it suspended otherwise
 
-            const checkAudio = () => {
-              if (!sensorsActive) return;
-              analyser.getByteFrequencyData(dataArr);
-              const avg = dataArr.reduce((a, b) => a + b, 0) / dataArr.length;
-              if (avg > 25 && !speaking) {
-                speaking = true;
-                sendGesture("speech");
-                setTimeout(() => { speaking = false; }, 2000);
-              }
-              requestAnimationFrame(checkAudio);
-            };
-            checkAudio();
-          } catch (e) {
-            console.error("Audio detection setup failed:", e);
-          }
+              const source = audioCtx.createMediaStreamSource(myStream);
+              const analyser = audioCtx.createAnalyser();
+              analyser.fftSize = 2048;
+              source.connect(analyser);
+
+              // Force the audio graph active on iOS by routing through a silent gain node
+              const silentGain = audioCtx.createGain();
+              silentGain.gain.value = 0;
+              analyser.connect(silentGain);
+              silentGain.connect(audioCtx.destination);
+
+              const buf = new Float32Array(analyser.fftSize);
+              let speaking = false;
+
+              const checkAudio = () => {
+                if (!sensorsActive) return;
+                analyser.getFloatTimeDomainData(buf);
+                // RMS (root-mean-square) — silence ≈ 0.001, speech ≈ 0.01–0.1
+                let sumSq = 0;
+                for (let i = 0; i < buf.length; i++) sumSq += buf[i] * buf[i];
+                const rms = Math.sqrt(sumSq / buf.length);
+                if (rms > 0.05 && !speaking) {
+                  speaking = true;
+                  sendGesture("speech");
+                  setTimeout(() => { speaking = false; }, 2000);
+                }
+                requestAnimationFrame(checkAudio);
+              };
+              checkAudio();
+            } catch (e) {
+              console.error("Audio detection setup failed:", e);
+            }
+          })();
         }
       };
 

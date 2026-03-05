@@ -1,85 +1,130 @@
-h1 span.tag {
-  display: inline-block;
-  font-size: 0.65rem;
-  background: #0f3460;
-  color: #4cc9f0;
-  border-radius: 6px;
-  padding: 2px 8px;
-  vertical-align: middle;
-  margin-left: 8px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-weight: 600;
+/* ══════════════════════════════════════
+   Receiver – lobby & game styles
+   ══════════════════════════════════════ */
+
+/* ── Lobby ── */
+.lobby {
+  max-width: 960px;
+  margin: 0 auto;
 }
 
-.receiver-layout {
+.lobby-hero {
+  text-align: center;
+  padding: 32px 16px 20px;
+}
+
+.lobby-title {
+  font-size: 2.6rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+  background: linear-gradient(135deg, #f1c40f, #e67e22);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.lobby-subtitle {
+  font-size: 1rem;
+  color: #8b949e;
+  margin-bottom: 16px;
+}
+
+.lobby-body {
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 20px;
+  grid-template-columns: 1fr 300px;
+  gap: 28px;
   align-items: start;
 }
 
-@media (max-width: 800px) {
-  .receiver-layout {
+@media (max-width: 780px) {
+  .lobby-body {
     grid-template-columns: 1fr;
   }
 }
 
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.phone-data {
+/* Instructions */
+.lobby-instructions {
   background: #16213e;
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 14px;
+  padding: 24px 28px;
 }
 
-.phone-data h2 {
-  font-size: 0.9rem;
-  color: #a8b2d1;
+.lobby-instructions h2 {
+  font-size: 1.1rem;
+  color: #f1c40f;
+  margin-bottom: 14px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 12px;
+  letter-spacing: 0.06em;
 }
 
-.phone-data ul {
-  list-style: none;
+.lobby-instructions ol {
+  padding-left: 20px;
   display: flex;
   flex-direction: column;
+  gap: 10px;
+  color: #cdd6f4;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.lobby-instructions ol li::marker {
+  color: #e67e22;
+  font-weight: 700;
+}
+
+.lobby-instructions em {
+  color: #e74c3c;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.lobby-commands {
+  margin-top: 20px;
+}
+
+.lobby-commands h3 {
+  font-size: 0.85rem;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 10px;
+}
+
+.command-chips {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.phone-data li {
-  font-size: 0.95rem;
-  color: #cdd6f4;
+.chip {
   background: #0f2040;
-  border-radius: 8px;
-  padding: 8px 12px;
+  color: #cdd6f4;
+  font-size: 0.8rem;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid #1e3a5f;
+  white-space: nowrap;
 }
 
-.phone-data li strong {
-  color: #4cc9f0;
-}
-
-.gyro-placeholder {
-  font-size: 0.85rem;
-  color: #5a6b8a;
-  font-style: italic;
-  text-align: center;
-  padding: 12px 0;
-}
-
-.main-content {
+/* Connection panel */
+.lobby-connect {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
-.video-wrap {
+.lobby-preview {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  max-height: 180px;
+}
+
+.lobby-preview video {
   width: 100%;
+  height: auto;
+  display: block;
 }
 
 .peer-bar {
@@ -101,41 +146,13 @@ h1 span.tag {
   flex: 1;
 }
 
-.btn-flash {
-  display: none;
-  margin-top: 12px;
-  background: #c0392b;
-  color: #fff;
-  border-radius: 10px;
-  padding: 12px 16px;
-  text-align: center;
-  font-weight: 700;
-  font-size: 1rem;
-  animation: flashIn 0.15s ease;
-}
-
-.btn-flash.show {
-  display: block;
-}
-
-@keyframes flashIn {
-  from { transform: scale(1.08); opacity: 0.5; }
-  to   { transform: scale(1);    opacity: 1; }
-}
-
-/* ── Hidden utility ── */
-.hidden {
-  display: none !important;
-}
-
 /* ── Start Game Button ── */
 .btn-start-game {
   display: none;
   width: 100%;
-  padding: 18px;
-  margin-top: 16px;
-  font-size: 1.3rem;
-  font-weight: 700;
+  padding: 16px;
+  font-size: 1.2rem;
+  font-weight: 800;
   color: #fff;
   background: linear-gradient(135deg, #e67e22, #d35400);
   border: none;
@@ -143,7 +160,7 @@ h1 span.tag {
   cursor: pointer;
   box-shadow: 0 4px 20px rgba(230, 126, 34, 0.4);
   transition: transform 0.15s, box-shadow 0.15s;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
 }
 
 .btn-start-game.visible {
@@ -159,7 +176,14 @@ h1 span.tag {
   transform: scale(0.97);
 }
 
-/* ── Game Screen ── */
+/* ── Hidden utility ── */
+.hidden {
+  display: none !important;
+}
+
+/* ══════════════════════════════════════
+   Game Screen
+   ══════════════════════════════════════ */
 .game-screen {
   display: none;
   position: fixed;
@@ -175,7 +199,6 @@ h1 span.tag {
   display: flex;
 }
 
-/* Game header */
 .game-header {
   position: absolute;
   top: 0;
@@ -218,7 +241,6 @@ h1 span.tag {
   background: rgba(255, 107, 107, 0.25);
 }
 
-/* Command display */
 .command-display {
   text-align: center;
   padding: 0 24px;
@@ -245,7 +267,6 @@ h1 span.tag {
   text-shadow: 0 2px 20px rgba(255, 255, 255, 0.15);
 }
 
-/* Feedback */
 .feedback-display {
   margin-top: 32px;
   font-size: 1.5rem;
@@ -262,7 +283,6 @@ h1 span.tag {
   color: #e74c3c;
 }
 
-/* Camera PIP */
 .camera-pip {
   position: absolute;
   bottom: 20px;

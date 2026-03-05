@@ -8,31 +8,46 @@
     <link rel="stylesheet" href="receiver.css" />
   </head>
   <body>
-    <div id="lobbyScreen" class="container">
-      <h1>Simon Says <span class="tag">Receiver</span></h1>
+    <div id="lobbyScreen" class="lobby">
+      <!-- Hero -->
+      <div class="lobby-hero">
+        <h1 class="lobby-title">🎮 Simon Says</h1>
+        <p class="lobby-subtitle">The party game — use your phone as a controller!</p>
+        <div id="statusBar" class="status disconnected">Connecting…</div>
+      </div>
 
-      <div id="statusBar" class="status disconnected">Connecting…</div>
+      <!-- Body -->
+      <div class="lobby-body">
+        <!-- Left: instructions -->
+        <div class="lobby-instructions">
+          <h2>How to Play</h2>
+          <ol>
+            <li>Scan the QR code with your phone to connect</li>
+            <li>Tap <strong>Start Controller Mode</strong> on your phone</li>
+            <li>Press <strong>Start Game</strong> here when ready</li>
+            <li>Follow the commands — but <em>only</em> when Simon says!</li>
+          </ol>
+          <div class="lobby-commands">
+            <h3>Commands</h3>
+            <div class="command-chips">
+              <span class="chip">🤳 Touch the screen</span>
+              <span class="chip">🦘 Jump</span>
+              <span class="chip">🦆 Duck</span>
+              <span class="chip">🌀 Do a 360</span>
+              <span class="chip">📱 Shake your phone</span>
+              <span class="chip">🗣️ Say something</span>
+            </div>
+          </div>
+        </div>
 
-      <div class="receiver-layout">
-        <!-- Sidebar: QR + Phone data -->
-        <div class="sidebar">
+        <!-- Right: connection -->
+        <div class="lobby-connect">
           <div class="qr-section">
-            <h2>Scan to open Sender</h2>
+            <h2>Scan to Join</h2>
             <div id="qrcode"></div>
             <p id="urlDisplay"></p>
           </div>
 
-          <div class="phone-data">
-            <h2>Phone Sensors</h2>
-            <ul id="phoneDataList">
-              <li class="gyro-placeholder">No sensor data yet</li>
-            </ul>
-            <div id="btnFlash" class="btn-flash">🔴 Button Pressed!</div>
-          </div>
-        </div>
-
-        <!-- Main: peer select + videos -->
-        <div class="main-content">
           <div class="peer-bar">
             <label for="peerSelect">Connect to:</label>
             <select id="peerSelect">
@@ -40,15 +55,12 @@
             </select>
           </div>
 
-          <div class="video-wrap">
-            <div class="video-box">
-              <h2>Sender Camera</h2>
-              <video id="otherCamera" playsinline autoplay></video>
-            </div>
+          <div class="lobby-preview">
+            <video id="otherCamera" playsinline autoplay></video>
           </div>
 
           <button id="startGameBtn" class="btn-start-game">
-            Start Simon Says!
+            ▶  Start Game
           </button>
         </div>
       </div>
@@ -87,8 +99,6 @@
       const $otherCamera    = document.getElementById("otherCamera");
       const $peerSelect     = document.getElementById("peerSelect");
       const $statusBar      = document.getElementById("statusBar");
-      const $phoneDataList  = document.getElementById("phoneDataList");
-      const $btnFlash       = document.getElementById("btnFlash");
       const $startGameBtn   = document.getElementById("startGameBtn");
       const $stopGameBtn    = document.getElementById("stopGameBtn");
       const $lobbyScreen    = document.getElementById("lobbyScreen");
@@ -101,7 +111,6 @@
       const $pipCamera      = document.getElementById("pipCamera");
 
       let socket, peer;
-      let flashTimer = null;
 
       /* ── Game State ── */
       const COMMANDS = [
@@ -242,19 +251,7 @@
 
       /* ── Message handling ── */
       const handlePeerMessage = (msg) => {
-        if (msg.type === "gyro") {
-          $phoneDataList.innerHTML = `
-            <li><strong>Gyro α (Z):</strong> ${msg.alpha}°</li>
-            <li><strong>Gyro β (X):</strong> ${msg.beta}°</li>
-            <li><strong>Gyro γ (Y):</strong> ${msg.gamma}°</li>
-            <li><strong>Accel X:</strong> ${msg.ax} m/s²</li>
-            <li><strong>Accel Y:</strong> ${msg.ay} m/s²</li>
-            <li><strong>Accel Z:</strong> ${msg.az} m/s²</li>
-          `;
-        } else if (msg.type === "button") {
-          clearTimeout(flashTimer);
-          $btnFlash.classList.add("show");
-          flashTimer = setTimeout(() => $btnFlash.classList.remove("show"), 1000);
+        if (msg.type === "button") {
           if (gameActive) handleGameAction("tap");
         } else if (msg.type === "gesture") {
           if (gameActive) handleGameAction(msg.gesture);
@@ -305,12 +302,15 @@
           }
           $gameScore.textContent = `Score: ${score}`;
           commandTimer = setTimeout(nextCommand, 2000);
-        }, 5000);
+        }, 3000);
       };
 
       const handleGameAction = (gesture) => {
         if (!gameActive || !currentCommand || actionPerformed) return;
         actionPerformed = true;
+
+        // resolve human-friendly label for the performed gesture
+        const performed = (COMMANDS.find(c => c.gesture === gesture) || { text: gesture }).text;
 
         if (gesture === currentCommand.gesture) {
           if (simonSays) {
@@ -321,7 +321,7 @@
             showFeedback("Simon didn't say! −1 ✗", "wrong");
           }
         } else {
-          showFeedback("Wrong action!", "wrong");
+          showFeedback(`You did ${performed}, that's wrong!`, "wrong");
         }
         $gameScore.textContent = `Score: ${score}`;
       };
