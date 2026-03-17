@@ -30,6 +30,11 @@
       <div id="tapBtnWrap" class="tap-btn-wrap">
         <button id="tapBtn" class="tap-btn">TAP</button>
       </div>
+
+      <div id="gameCtrlWrap" class="game-ctrl-wrap">
+        <button id="startGameBtn" class="btn-game" disabled>▶ Start Game</button>
+        <button id="stopGameBtn" class="btn-game btn-game-stop" style="display:none">■ End Game</button>
+      </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -46,9 +51,15 @@
       const $sensorInfo    = document.getElementById("sensorInfo");
       const $tapBtnWrap    = document.getElementById("tapBtnWrap");
       const $tapBtn        = document.getElementById("tapBtn");
+      const $startGameBtn  = document.getElementById("startGameBtn");
+      const $stopGameBtn   = document.getElementById("stopGameBtn");
 
       let socket, myStream, peer;
       let sensorsActive = false;
+      let speechEnabled = false;   // true only when the current command is "Say something!"
+      let activeCommandGesture = null;
+      let commandArmAt = 0;
+      const COMMAND_ARM_DELAY = 350;
 
       const init = async () => {
         try {
@@ -56,6 +67,8 @@
             audio: true,
             video: { width: 1280, height: 720, facingMode: "environment" },
           });
+           // Microphone starts muted; only unmuted during "Say something!" command
+           myStream.getAudioTracks().forEach(t => { t.enabled = false; });
         } catch (e) {
           console.error("Could not access camera:", e);
           $statusBar.textContent = "Warning: camera access denied — no video will be sent.";
@@ -75,6 +88,10 @@
           $statusBar.textContent = "Disconnected from server";
           $statusBar.className = "status disconnected";
           setPeerInfo(null);
+          activeCommandGesture = null;
+          commandArmAt = 0;
+          speechEnabled = false;
+          if (myStream) myStream.getAudioTracks().forEach(t => { t.enabled = false; });
         });
 
         /* Auto-connect: pick the first available peer */
@@ -96,6 +113,13 @@
             $startBtn.textContent = "Start Controller Mode";
             $startBtn.classList.remove("active");
             $sensorInfo.classList.remove("visible");
+            $startGameBtn.disabled = true;
+            $startGameBtn.style.display = "";
+            $stopGameBtn.style.display  = "none";
+            activeCommandGesture = null;
+            commandArmAt = 0;
+            speechEnabled = false;
+            if (myStream) myStream.getAudioTracks().forEach(t => { t.enabled = false; });
           }
         });
 
@@ -125,9 +149,23 @@
         peer.on("connect", () => {
           setPeerInfo(peerId);
           $startBtn.disabled = false;
+          $startGameBtn.disabled = false;
         });
 
         peer.on("stream", () => {/* Sender doesn't render remote stream */});
+
+        // Receive command notifications from the receiver
+        peer.on("data", (raw) => {
+          const msg = JSON.parse(raw);
+          if (msg.type === "command") {
+            activeCommandGesture = msg.gesture || null;
+            commandArmAt = Date.now() + COMMAND_ARM_DELAY;
+            speechEnabled = activeCommandGesture === "speech";
+            if (myStream) {
+              myStream.getAudioTracks().forEach(t => { t.enabled = speechEnabled; });
+            }
+          }
+        });
 
         peer.on("close", () => {
           peer.destroy();
@@ -138,7 +176,14 @@
           $startBtn.classList.remove("active");
           $sensorInfo.classList.remove("visible");
           $tapBtnWrap.classList.remove("visible");
+          $startGameBtn.disabled = true;
+          $startGameBtn.style.display = "";
+          $stopGameBtn.style.display  = "none";
           sensorsActive = false;
+            activeCommandGesture = null;
+            commandArmAt = 0;
+            speechEnabled = false;
+            if (myStream) myStream.getAudioTracks().forEach(t => { t.enabled = false; });
         });
 
         peer.on("error", (err) => console.error("Peer error:", err));
@@ -170,6 +215,26 @@
       $tapBtn.addEventListener("click", () => {
         if (peer && peer.connected) {
           peer.send(JSON.stringify({ type: "button" }));
+        }
+      });
+
+      $startGameBtn.addEventListener("click", () => {
+        if (peer && peer.connected) {
+          activeCommandGesture = null;
+          commandArmAt = 0;
+          peer.send(JSON.stringify({ type: "start-game" }));
+          $startGameBtn.style.display = "none";
+          $stopGameBtn.style.display  = "";
+        }
+      });
+
+      $stopGameBtn.addEventListener("click", () => {
+        if (peer && peer.connected) {
+          activeCommandGesture = null;
+          commandArmAt = 0;
+          peer.send(JSON.stringify({ type: "stop-game" }));
+          $stopGameBtn.style.display  = "none";
+          $startGameBtn.style.display = "";
         }
       });
 
@@ -211,6 +276,7 @@
 
         const sendGesture = (gesture) => {
           const now = Date.now();
+          if (gesture !== activeCommandGesture || now < commandArmAt) return;
           if (now - lastGestureTime < COOLDOWN) return;
           lastGestureTime = now;
           if (peer && peer.connected) {
@@ -224,7 +290,7 @@
         let shakeReversals = 0;
         let shakeWindowStart = 0;
         let shakeLastSign = 0; // −1 or +1
-        const SHAKE_THRESH = 6;
+        const SHAKE_THRESH = 4;
         const SHAKE_REVERSALS_NEEDED = 4;
         const SHAKE_WINDOW = 1200; // ms
 
@@ -240,8 +306,8 @@
         let verticalPhase = "idle";
         let verticalStart = 0;
         const VERTICAL_TIMEOUT = 1500;
-        const VERT_HIGH = 14;  // magnitude threshold for impact / push-off
-        const VERT_LOW  = 5;   // magnitude threshold for freefall / drop
+        const VERT_HIGH = 10;  // magnitude threshold for impact / push-off
+        const VERT_LOW  = 3; // magnitude threshold for freefall / drop
 
         /* ─── 360 Spin ───
            Accumulate ≥ 350° of alpha rotation within a 3 s window.
@@ -251,6 +317,16 @@
         let spinStart = 0;
         const SPIN_WINDOW = 3000;
         const SPIN_THRESHOLD = 350;
+
+          /* ─── Move Left / Right (tilt) ───
+            Use gamma tilt with hold time + hysteresis to avoid jitter false positives. */
+          const TILT_TRIGGER = 15;
+          const TILT_RELEASE = 6;
+          const TILT_HOLD_MS = 100;
+          let leftHoldStart = 0;
+          let rightHoldStart = 0;
+          let leftReady = true;
+          let rightReady = true;
 
         /* ── Device Motion (acceleration) ── */
         window.addEventListener("devicemotion", (event) => {
@@ -265,9 +341,17 @@
             };
           }
 
+          const commandArmed = !!activeCommandGesture && Date.now() >= commandArmAt;
+          if (!commandArmed) {
+            shakeReversals = 0;
+            shakeLastSign = 0;
+            verticalPhase = "idle";
+            return;
+          }
+
           /* ── Shake detection ── */
           const linAccel = event.acceleration;
-          if (linAccel) {
+          if (linAccel && activeCommandGesture === "shake") {
             // Use whichever lateral axis has the biggest value
             const val = Math.abs(linAccel.x || 0) > Math.abs(linAccel.y || 0)
               ? (linAccel.x || 0) : (linAccel.y || 0);
@@ -294,7 +378,7 @@
 
           /* ── Jump / Duck (unified magnitude detector) ── */
           const aig = event.accelerationIncludingGravity;
-          if (aig) {
+          if (aig && (activeCommandGesture === "jump" || activeCommandGesture === "duck")) {
             const mag = Math.sqrt(
               (aig.x || 0) ** 2 + (aig.y || 0) ** 2 + (aig.z || 0) ** 2
             );
@@ -307,11 +391,11 @@
 
             switch (verticalPhase) {
               case "idle":
-                if (mag > VERT_HIGH) {
+                if (activeCommandGesture === "jump" && mag > VERT_HIGH) {
                   // High G first → jump push-off
                   verticalPhase = "jump-push";
                   verticalStart = now;
-                } else if (mag < VERT_LOW) {
+                } else if (activeCommandGesture === "duck" && mag < VERT_LOW) {
                   // Low G first → duck drop
                   verticalPhase = "duck-drop";
                   verticalStart = now;
@@ -349,6 +433,63 @@
             ...lastAccel,
           }));
 
+          const commandArmed = !!activeCommandGesture && Date.now() >= commandArmAt;
+          if (!commandArmed) {
+            spinAccum = 0;
+            spinStart = Date.now();
+            lastAlpha = null;
+            leftHoldStart = 0;
+            rightHoldStart = 0;
+            leftReady = true;
+            rightReady = true;
+            return;
+          }
+
+          /* ── Move left / right via tilt (gamma) ── */
+          const gamma = event.gamma ?? 0;
+          if (activeCommandGesture === "left" || activeCommandGesture === "right") {
+            const now = Date.now();
+
+            if (activeCommandGesture === "left") {
+              if (gamma <= -TILT_TRIGGER) {
+                if (!leftHoldStart) leftHoldStart = now;
+                if (leftReady && now - leftHoldStart >= TILT_HOLD_MS) {
+                  sendGesture("left");
+                  leftReady = false;
+                }
+              } else {
+                leftHoldStart = 0;
+                if (gamma > -TILT_RELEASE) leftReady = true;
+              }
+            }
+
+            if (activeCommandGesture === "right") {
+              if (gamma >= TILT_TRIGGER) {
+                if (!rightHoldStart) rightHoldStart = now;
+                if (rightReady && now - rightHoldStart >= TILT_HOLD_MS) {
+                  sendGesture("right");
+                  rightReady = false;
+                }
+              } else {
+                rightHoldStart = 0;
+                if (gamma < TILT_RELEASE) rightReady = true;
+              }
+            }
+
+            // Keep spin detector inactive while handling tilt commands.
+            spinAccum = 0;
+            spinStart = now;
+            lastAlpha = null;
+            return;
+          }
+
+          if (activeCommandGesture !== "spin") {
+            spinAccum = 0;
+            spinStart = Date.now();
+            lastAlpha = null;
+            return;
+          }
+
           /* ── 360 Spin (directional accumulation) ── */
           const alpha = event.alpha ?? 0;
           if (lastAlpha !== null) {
@@ -378,6 +519,12 @@
               const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
               await audioCtx.resume();  // must await — iOS keeps it suspended otherwise
 
+              // Keep speech detector aligned with the current command at all times.
+              const syncSpeechGate = () => {
+                speechEnabled = activeCommandGesture === "speech" && Date.now() >= commandArmAt;
+                if (myStream) myStream.getAudioTracks().forEach(t => { t.enabled = speechEnabled; });
+              };
+
               const source = audioCtx.createMediaStreamSource(myStream);
               const analyser = audioCtx.createAnalyser();
               analyser.fftSize = 2048;
@@ -394,12 +541,13 @@
 
               const checkAudio = () => {
                 if (!sensorsActive) return;
+                syncSpeechGate();
                 analyser.getFloatTimeDomainData(buf);
                 // RMS (root-mean-square) — silence ≈ 0.001, speech ≈ 0.01–0.1
                 let sumSq = 0;
                 for (let i = 0; i < buf.length; i++) sumSq += buf[i] * buf[i];
                 const rms = Math.sqrt(sumSq / buf.length);
-                if (rms > 0.05 && !speaking) {
+                if (rms > 0.05 && !speaking && speechEnabled) {
                   speaking = true;
                   sendGesture("speech");
                   setTimeout(() => { speaking = false; }, 2000);
