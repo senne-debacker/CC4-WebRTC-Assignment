@@ -1,135 +1,91 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+:root{
+  --bg: #0f1724;
+  --card: #0f1b2b;
+  --muted: #9aa6c7;
+  --accent: #4cc9f0;
+  --accent-2: #7be495;
+  --primary: #2dd4bf;
+  --danger: #ff6b6b;
+  --glass: rgba(255,255,255,0.04);
+  --radius: 12px;
+  --max-width: 1100px;
+  --ui-gap: 16px;
+  --ff-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
-body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #1a1a2e;
-  color: #eee;
-  min-height: 100vh;
-  padding: 20px;
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:var(--ff-stack);
+  background: linear-gradient(180deg,var(--bg),#071025 120%);
+  color:#e6eef8;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  line-height:1.35;
+  padding:24px;
 }
 
-h1 {
-  text-align: center;
-  margin-bottom: 20px;
-  font-size: 1.4rem;
+.container{max-width:var(--max-width);margin:0 auto}
+
+/* Utility helpers */
+.hidden{display:none !important}
+.center{text-align:center}
+
+/* Cards / panels */
+.card{
+  background:linear-gradient(180deg,var(--card),rgba(10,18,28,0.8));
+  border-radius:var(--radius);
+  padding:18px;
+  box-shadow:0 6px 30px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
 }
 
-.container {
-  max-width: 1100px;
-  margin: 0 auto;
-}
+/* Responsive grid helpers used by receiver */
+.grid-2{display:grid;grid-template-columns:1fr 330px;gap:var(--ui-gap)}
+@media (max-width:880px){.grid-2{grid-template-columns:1fr}}
 
-/* ── Video ── */
-.video-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 20px;
-}
+/* Video elements */
+video{width:100%;height:auto;border-radius:10px;background:#000;display:block}
 
-@media (max-width: 600px) {
-  .video-grid { grid-template-columns: 1fr; }
-}
+/* QR */
+.qr-section{display:flex;flex-direction:column;align-items:center;gap:12px}
+.qr-section #qrcode{background:white;padding:10px;border-radius:8px}
+.qr-section p{color:var(--muted);font-size:0.9rem;word-break:break-all}
 
-.video-box {
-  background: #16213e;
-  border-radius: 12px;
-  padding: 12px;
-  text-align: center;
-}
+/* Status */
+.status{display:inline-block;padding:10px 14px;border-radius:10px;font-size:0.9rem;color:var(--muted);background:var(--glass);border:1px solid rgba(255,255,255,0.03)}
+.status.connected{color:var(--accent);background:linear-gradient(90deg,rgba(76,201,240,0.06),rgba(123,228,149,0.02));border-color:rgba(76,201,240,0.12)}
+.status.disconnected{color:var(--danger);background:linear-gradient(90deg,rgba(255,107,107,0.03),transparent);border-color:rgba(255,107,107,0.08)}
 
-.video-box h2 {
-  font-size: 0.85rem;
-  margin-bottom: 8px;
-  color: #a8b2d1;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
+/* Typographic helpers */
+h1,h2{margin:0 0 8px}
+h1{font-size:clamp(1.4rem,2.6vw,2.4rem)}
+h2{font-size:1.05rem;color:var(--muted)}
 
-video {
-  width: 100%;
-  height: auto;
-  border-radius: 8px;
-  background: #000;
-}
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:12px;border:none;cursor:pointer;font-weight:700;color:#041826;background:linear-gradient(90deg,var(--primary),var(--accent));box-shadow:0 8px 26px rgba(15,36,55,0.55);transition:transform .12s ease,box-shadow .12s ease;}
+.btn:active{transform:translateY(1px) scale(.995)}
+.btn.secondary{background:linear-gradient(90deg,#ffffff08,transparent);color:var(--muted);border:1px solid rgba(255,255,255,0.03);box-shadow:none}
+.btn.ghost{background:transparent;color:var(--accent);border:1px dashed rgba(76,201,240,0.12)}
+.btn.full{width:100%}
 
-/* ── Forms ── */
-label {
-  font-size: 0.9rem;
-  color: #a8b2d1;
-}
+/* Small controls */
+label{color:var(--muted);font-size:0.95rem}
+select{padding:10px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.04);color:inherit}
 
-select {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #2a3a55;
-  background: #0f2040;
-  color: #eee;
-  font-size: 0.9rem;
-  cursor: pointer;
-  flex: 1;
-}
+/* Chips */
+.chip{background:rgba(255,255,255,0.02);padding:6px 10px;border-radius:999px;color:var(--muted);font-size:0.9rem;border:1px solid rgba(255,255,255,0.02)}
 
-select:focus {
-  outline: none;
-  border-color: #4cc9f0;
-}
+/* Feedback */
+.feedback-display{min-height:2.4rem;font-weight:800}
+.feedback-display.correct{color:var(--accent-2)}
+.feedback-display.wrong{color:var(--danger)}
 
-/* ── QR section ── */
-.qr-section {
-  text-align: center;
-  background: #16213e;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 0;
-}
+/* Camera pip */
+.camera-pip{position:fixed;right:20px;bottom:20px;width:180px;border-radius:12px;overflow:hidden;box-shadow:0 10px 40px rgba(2,6,23,0.8);border:1px solid rgba(255,255,255,0.03)}
 
-.qr-section h2 {
-  font-size: 0.85rem;
-  color: #a8b2d1;
-  margin-bottom: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
+/* Status helpers for small screens */
+@media (max-width:480px){body{padding:12px}.card{padding:12px}}
 
-.qr-section p {
-  font-size: 0.75rem;
-  color: #5a6b8a;
-  margin-top: 10px;
-  word-break: break-all;
-}
-
-#qrcode {
-  display: inline-block;
-  background: white;
-  padding: 12px;
-  border-radius: 8px;
-}
-
-/* ── Status bar ── */
-.status {
-  text-align: center;
-  padding: 9px 14px;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  font-size: 0.8rem;
-  letter-spacing: 0.03em;
-}
-
-.status.connected {
-  background: #0f3460;
-  color: #4cc9f0;
-  border: 1px solid #1a4a80;
-}
-
-.status.disconnected {
-  background: #2a0a0a;
-  color: #ff6b6b;
-  border: 1px solid #4a1010;
-}
 
