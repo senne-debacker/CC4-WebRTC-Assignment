@@ -259,8 +259,8 @@ const activateSensors = () => {
   let verticalPhase = "idle";
   let verticalStart = 0;
   const VERTICAL_TIMEOUT = 1500;
-  const VERT_HIGH = 10;  // magnitude threshold for impact / push-off
-  const VERT_LOW  = 3; // magnitude threshold for freefall / drop
+  const VERT_HIGH = 14;  // magnitude threshold for impact / push-off (increased)
+  const VERT_LOW  = 5; // magnitude threshold for freefall / drop (increased)
 
   /* ─── 360 Spin ───
      Accumulate ≥ 350° of alpha rotation within a 3 s window.
@@ -337,38 +337,14 @@ const activateSensors = () => {
       );
       const now = Date.now();
 
-      // Timeout → reset
-      if (verticalPhase !== "idle" && now - verticalStart > VERTICAL_TIMEOUT) {
+      // Simpler: trigger on a single vertical crossing (user requested)
+      // Upward impulse → jump; downward drop → duck. Keep cooldown gating.
+      if (mag > VERT_HIGH && activeCommandGesture === "jump") {
         verticalPhase = "idle";
-      }
-
-      switch (verticalPhase) {
-        case "idle":
-          if (activeCommandGesture === "jump" && mag > VERT_HIGH) {
-            // High G first → jump push-off
-            verticalPhase = "jump-push";
-            verticalStart = now;
-          } else if (activeCommandGesture === "duck" && mag < VERT_LOW) {
-            // Low G first → duck drop
-            verticalPhase = "duck-drop";
-            verticalStart = now;
-          }
-          break;
-        case "jump-push":
-          if (mag < VERT_LOW) verticalPhase = "jump-freefall";
-          break;
-        case "jump-freefall":
-          if (mag > VERT_HIGH) {
-            verticalPhase = "idle";
-            sendGesture("jump");
-          }
-          break;
-        case "duck-drop":
-          if (mag > VERT_HIGH) {
-            verticalPhase = "idle";
-            sendGesture("duck");
-          }
-          break;
+        sendGesture("jump");
+      } else if (mag < VERT_LOW && activeCommandGesture === "duck") {
+        verticalPhase = "idle";
+        sendGesture("duck");
       }
     }
   });
@@ -398,43 +374,48 @@ const activateSensors = () => {
       return;
     }
 
-    /* ── Move left / right via tilt (gamma) ── */
-    const gamma = event.gamma ?? 0;
-    if (activeCommandGesture === "left" || activeCommandGesture === "right") {
-      const now = Date.now();
+          /* ── Move left / right via accelerometer (lateral accel) ── */
+          if (activeCommandGesture === "left" || activeCommandGesture === "right") {
+            const now = Date.now();
+            // Use whichever lateral accel axis has the biggest magnitude (x or y)
+            const axNum = parseFloat(lastAccel.ax) || 0;
+            const ayNum = parseFloat(lastAccel.ay) || 0;
+            const axisVal = Math.abs(axNum) > Math.abs(ayNum) ? axNum : ayNum;
+            const ACCEL_TILT_TRIGGER = 6; // m/s² — gravity component threshold
+            const ACCEL_TILT_RELEASE = 3;
 
-      if (activeCommandGesture === "left") {
-        if (gamma <= -TILT_TRIGGER) {
-          if (!leftHoldStart) leftHoldStart = now;
-          if (leftReady && now - leftHoldStart >= TILT_HOLD_MS) {
-            sendGesture("left");
-            leftReady = false;
+            if (activeCommandGesture === "left") {
+              if (axisVal <= -ACCEL_TILT_TRIGGER) {
+                if (!leftHoldStart) leftHoldStart = now;
+                if (leftReady && now - leftHoldStart >= TILT_HOLD_MS) {
+                  sendGesture("left");
+                  leftReady = false;
+                }
+              } else {
+                leftHoldStart = 0;
+                if (axisVal > -ACCEL_TILT_RELEASE) leftReady = true;
+              }
+            }
+
+            if (activeCommandGesture === "right") {
+              if (axisVal >= ACCEL_TILT_TRIGGER) {
+                if (!rightHoldStart) rightHoldStart = now;
+                if (rightReady && now - rightHoldStart >= TILT_HOLD_MS) {
+                  sendGesture("right");
+                  rightReady = false;
+                }
+              } else {
+                rightHoldStart = 0;
+                if (axisVal < ACCEL_TILT_RELEASE) rightReady = true;
+              }
+            }
+
+            // Keep spin detector inactive while handling tilt commands.
+            spinAccum = 0;
+            spinStart = now;
+            lastAlpha = null;
+            return;
           }
-        } else {
-          leftHoldStart = 0;
-          if (gamma > -TILT_RELEASE) leftReady = true;
-        }
-      }
-
-      if (activeCommandGesture === "right") {
-        if (gamma >= TILT_TRIGGER) {
-          if (!rightHoldStart) rightHoldStart = now;
-          if (rightReady && now - rightHoldStart >= TILT_HOLD_MS) {
-            sendGesture("right");
-            rightReady = false;
-          }
-        } else {
-          rightHoldStart = 0;
-          if (gamma < TILT_RELEASE) rightReady = true;
-        }
-      }
-
-      // Keep spin detector inactive while handling tilt commands.
-      spinAccum = 0;
-      spinStart = now;
-      lastAlpha = null;
-      return;
-    }
 
     if (activeCommandGesture !== "spin") {
       spinAccum = 0;

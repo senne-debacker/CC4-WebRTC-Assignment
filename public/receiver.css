@@ -84,7 +84,7 @@
   flex-direction: column;
   gap: 12px;
 }
-.lobby-preview {
+ .lobby-preview {
   background: #000;
   border-radius: 10px;
   overflow: hidden;

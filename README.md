@@ -818,6 +818,8 @@ const handlePeerMessage = (msg) => {
 | Section | Details |
 | :--- | :--- |
 | **Description** | Speech detection was running continuously, causing it to fire during other commands. The fix: the receiver now sends a `{ type: "command", gesture }` message over the data channel at the start of every round (and `gesture: null` when the game stops). The sender uses this to set a `speechEnabled` flag, and the microphone RMS check only fires a gesture when that flag is true — i.e., only during the "Say something!" command. |
+
+ 
 | **AI Usage** | **Copilot** |
 
 ##### Question 01

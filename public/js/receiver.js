@@ -216,6 +216,8 @@ const nextCommand = () => {
   }, actionMs);
 };
 
+
+
 const loseLife = (message) => {
   lives = Math.max(0, lives - 1);
   showFeedback(`${message}  Lives left: ${lives}`, "wrong");
