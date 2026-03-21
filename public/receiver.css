@@ -178,6 +178,36 @@
   margin-bottom: 20px;
 }
 
+.btn-music-optin {
+  width: 100%;
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border-radius: 2px;
+  border: 1px solid rgba(241, 196, 15, 0.3);
+  background: linear-gradient(135deg, rgba(241, 196, 15, 0.18), rgba(230, 126, 34, 0.2));
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.12s, filter 0.12s, border-color 0.12s;
+}
+
+.btn-music-optin:hover {
+  filter: brightness(1.07);
+  border-color: rgba(241, 196, 15, 0.5);
+}
+
+.btn-music-optin:active {
+  transform: scale(0.98);
+}
+
+.btn-music-optin.enabled {
+  background: linear-gradient(135deg, rgba(46, 204, 113, 0.28), rgba(39, 174, 96, 0.28));
+  border-color: rgba(46, 204, 113, 0.55);
+}
+
 /* Default instructions list */
 .lobby-instructions ol {
   padding-left: 0;
@@ -658,6 +688,26 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   text-align: center;
+}
+
+.game-lives {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.life-icon {
+  font-size: 1rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 8px rgba(231, 76, 60, 0.45));
+  transition: opacity 0.2s, transform 0.2s, filter 0.2s;
+}
+
+.life-icon.lost {
+  opacity: 0.2;
+  transform: scale(0.85);
+  filter: grayscale(1);
 }
 
 .btn-stop-game {

@@ -8,6 +8,7 @@
       const $feedbackDisplay = document.getElementById("feedbackDisplay");
       const $gameScore      = document.getElementById("gameScore");
       const $gameRound      = document.getElementById("gameRound");
+      const $gameLives      = document.getElementById("gameLives");
       const $pipCamera      = document.getElementById("pipCamera");
       const $qrcode         = document.getElementById("qrcode");
       const $urlDisplay     = document.getElementById("urlDisplay");
@@ -22,6 +23,7 @@
       const $telemetryTapDot = document.getElementById("telemetryTapDot");
       const $telemetryTapStatus = document.getElementById("telemetryTapStatus");
       const $telemetryTapCount = document.getElementById("telemetryTapCount");
+      const $enableMusicBtn = document.getElementById("enableMusicBtn");
       const $gyroAlphaMarker = document.getElementById("gyroAlphaMarker");
       const $gyroBetaMarker = document.getElementById("gyroBetaMarker");
       const $gyroGammaMarker = document.getElementById("gyroGammaMarker");
@@ -63,6 +65,49 @@
       let simonSays = false;
       let actionPerformed = false;
       let commandBag = [];
+      const gameMusic = new Audio("/media/simon_says_ost.mp3");
+      gameMusic.loop = true;
+      gameMusic.preload = "auto";
+      let musicEnabledByUser = false;
+
+      const enableMusic = async () => {
+        musicEnabledByUser = true;
+        if ($enableMusicBtn) {
+          $enableMusicBtn.classList.add("enabled");
+          $enableMusicBtn.textContent = "Music enabled";
+        }
+
+        // Unlock audio on the first user gesture so startGame can play reliably.
+        try {
+          await gameMusic.play();
+          gameMusic.pause();
+          gameMusic.currentTime = 0;
+        } catch (e) {
+          console.warn("Music unlock interaction failed:", e);
+        }
+      };
+
+      const setMusicPlaying = async (playing) => {
+        if (playing) {
+          if (!musicEnabledByUser) return;
+          try {
+            await gameMusic.play();
+          } catch (e) {
+            console.warn("Game music could not autoplay:", e);
+          }
+          return;
+        }
+        gameMusic.pause();
+        gameMusic.currentTime = 0;
+      };
+
+      const renderLives = () => {
+        if (!$gameLives) return;
+        const $icons = $gameLives.querySelectorAll(".life-icon");
+        $icons.forEach(($icon, idx) => {
+          $icon.classList.toggle("lost", idx >= lives);
+        });
+      };
 
       const BASE_ACTION_MS = 3000;
       const BASE_GAP_MS = 2000;
@@ -318,8 +363,10 @@
         $commandPrefix.textContent = "";
         $feedbackDisplay.textContent = "";
         $feedbackDisplay.className = "feedback-display";
-        $gameScore.textContent = "Score: 0 | Lives: 3";
+        $gameScore.textContent = "Score: 0";
         $gameRound.textContent = "";
+        renderLives();
+        setMusicPlaying(true);
 
         commandTimer = setTimeout(nextCommand, 2000);
       };
@@ -352,7 +399,7 @@
           ? "command-prefix simon" : "command-prefix";
         $commandAction.textContent = cmd.text;
         $gameRound.textContent = `Round ${round} • Speed ${speedStep + 1}`;
-        $gameScore.textContent = `Score: ${score} | Lives: ${lives}`;
+        $gameScore.textContent = `Score: ${score}`;
         $feedbackDisplay.textContent = "";
         $feedbackDisplay.className = "feedback-display";
 
@@ -364,7 +411,7 @@
             score++;
             showFeedback("Correct! You resisted! +1 ✓", "correct");
           }
-          $gameScore.textContent = `Score: ${score} | Lives: ${lives}`;
+          $gameScore.textContent = `Score: ${score}`;
           if (!gameActive) return;
           commandTimer = setTimeout(nextCommand, gapMs);
         }, actionMs);
@@ -372,6 +419,7 @@
 
       const loseLife = (message) => {
         lives = Math.max(0, lives - 1);
+        renderLives();
         showFeedback(`${message}  Lives left: ${lives}`, "wrong");
         if (lives <= 0) {
           showFeedback("Game Over ☠️", "wrong");
@@ -399,7 +447,7 @@
         } else {
           loseLife(`You did ${performed}, that's wrong!`);
         }
-        $gameScore.textContent = `Score: ${score} | Lives: ${lives}`;
+        $gameScore.textContent = `Score: ${score}`;
       };
 
       const showFeedback = (text, type) => {
@@ -420,12 +468,14 @@
             simon: false,
           }));
         }
+        setMusicPlaying(false);
         $lobbyScreen.classList.remove("hidden");
         $gameScreen.classList.remove("active");
       };
 
       if ($otherCamera) $otherCamera.addEventListener("click", () => $otherCamera.play());
       if ($pipCamera) $pipCamera.addEventListener("click", () => $pipCamera.play());
+      if ($enableMusicBtn) $enableMusicBtn.addEventListener("click", enableMusic);
 
       resetTelemetry();
 
