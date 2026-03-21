@@ -693,6 +693,158 @@
 
 .game-screen.active { display: flex; }
 
+/* ══════════════════════════════════════
+   Death Screen
+   ══════════════════════════════════════ */
+.death-screen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  padding: 28px 16px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(231, 76, 60, 0.2), transparent 38%),
+    radial-gradient(circle at 85% 85%, rgba(241, 196, 15, 0.12), transparent 42%),
+    var(--bg);
+  align-items: center;
+  justify-content: center;
+}
+
+.death-screen.active {
+  display: flex;
+}
+
+.death-card {
+  width: min(640px, 100%);
+  background: linear-gradient(160deg, rgba(12, 18, 32, 0.95), rgba(10, 13, 23, 0.95));
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  border-radius: 2px;
+  padding: clamp(20px, 4vw, 34px);
+  box-shadow:
+    0 0 0 1px rgba(231, 76, 60, 0.25),
+    0 18px 46px rgba(0, 0, 0, 0.65);
+}
+
+.death-kicker {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--red);
+  margin-bottom: 8px;
+}
+
+.death-title {
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 8vw, 5rem);
+  letter-spacing: 0.06em;
+  line-height: 0.95;
+  margin-bottom: 16px;
+  color: #fff;
+  text-shadow: 0 0 22px rgba(231, 76, 60, 0.25);
+}
+
+.death-final-score-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid var(--border-md);
+  border-radius: 2px;
+  padding: 10px 14px;
+  margin-bottom: 18px;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.death-final-score-row strong {
+  font-family: var(--font-display);
+  font-size: 2.1rem;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.death-scoreboard-title {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.death-scoreboard {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.death-score-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.death-score-rank {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--gold);
+  letter-spacing: 0.06em;
+}
+
+.death-score-meta {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.death-score-value {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: #fff;
+  line-height: 1;
+}
+
+.death-scoreboard-empty {
+  border: 1px dashed var(--border-md);
+  border-radius: 2px;
+  padding: 12px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.death-hint {
+  margin-top: 14px;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.death-hint strong {
+  color: var(--gold);
+}
+
 /* ── Game header ── */
 .game-header {
   position: absolute;

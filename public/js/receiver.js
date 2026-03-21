@@ -3,12 +3,15 @@
       const $connectionStatusIcon = document.getElementById("connectionStatusIcon");
       const $lobbyScreen    = document.getElementById("lobbyScreen");
       const $gameScreen     = document.getElementById("gameScreen");
+      const $deathScreen    = document.getElementById("deathScreen");
       const $commandPrefix  = document.getElementById("commandPrefix");
       const $commandAction  = document.getElementById("commandAction");
       const $feedbackDisplay = document.getElementById("feedbackDisplay");
       const $gameScore      = document.getElementById("gameScore");
       const $gameRound      = document.getElementById("gameRound");
       const $gameLives      = document.getElementById("gameLives");
+      const $deathFinalScore = document.getElementById("deathFinalScore");
+      const $deathScoreboard = document.getElementById("deathScoreboard");
       const $pipCamera      = document.getElementById("pipCamera");
       const $qrcode         = document.getElementById("qrcode");
       const $urlDisplay     = document.getElementById("urlDisplay");
@@ -150,6 +153,9 @@
       const GAP_REDUCTION_PER_STEP = 150;
       const MIN_ACTION_MS = 1400;
       const MIN_GAP_MS = 900;
+      const SCOREBOARD_STORAGE_KEY = "simonSaysScoreboardV1";
+      const SCOREBOARD_LIMIT = 8;
+      let activeDeathToken = null;
 
       const refillCommandBag = () => {
         // Fisher-Yates shuffle so every command appears once before repeats.
@@ -158,6 +164,137 @@
           const j = Math.floor(Math.random() * (i + 1));
           [commandBag[i], commandBag[j]] = [commandBag[j], commandBag[i]];
         }
+      };
+
+      const formatScoreTimestamp = (timestamp) => {
+        const date = new Date(timestamp);
+        if (Number.isNaN(date.getTime())) return "Unknown";
+        return date.toLocaleString([], {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      };
+
+      const normalizePlayerName = (name) => {
+        const cleaned = String(name || "").trim().replace(/\s+/g, " ");
+        return cleaned.slice(0, 20) || "Player";
+      };
+
+      const loadScoreboard = () => {
+        try {
+          const raw = localStorage.getItem(SCOREBOARD_STORAGE_KEY);
+          if (!raw) return [];
+          const parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) return [];
+          return parsed
+            .map((entry) => ({
+              score: Number(entry.score) || 0,
+              timestamp: Number(entry.timestamp) || Date.now(),
+              name: normalizePlayerName(entry.name),
+              token: String(entry.token || ""),
+            }))
+            .slice(0, SCOREBOARD_LIMIT);
+        } catch {
+          return [];
+        }
+      };
+
+      const saveScoreboard = (rows) => {
+        try {
+          localStorage.setItem(SCOREBOARD_STORAGE_KEY, JSON.stringify(rows));
+        } catch {
+          // Ignore storage failures and keep gameplay running.
+        }
+      };
+
+      const recordScore = (finalScore, playerName = "Player", deathToken = `${Date.now()}-${Math.random()}`) => {
+        const rows = loadScoreboard();
+        rows.push({
+          score: Number(finalScore) || 0,
+          timestamp: Date.now(),
+          name: normalizePlayerName(playerName),
+          token: String(deathToken),
+        });
+        rows.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return a.timestamp - b.timestamp;
+        });
+        const trimmed = rows.slice(0, SCOREBOARD_LIMIT);
+        saveScoreboard(trimmed);
+        return trimmed;
+      };
+
+      const updateRecordedScoreName = (deathToken, name) => {
+        const token = String(deathToken || "");
+        if (!token) return loadScoreboard();
+        const rows = loadScoreboard();
+        const target = rows.find((row) => String(row.token || "") === token);
+        if (!target) return rows;
+        target.name = normalizePlayerName(name);
+        saveScoreboard(rows);
+        return rows;
+      };
+
+      const renderScoreboard = (rows) => {
+        if (!$deathScoreboard) return;
+        $deathScoreboard.innerHTML = "";
+
+        if (!rows.length) {
+          const $empty = document.createElement("li");
+          $empty.className = "death-scoreboard-empty";
+          $empty.textContent = "No scores yet";
+          $deathScoreboard.appendChild($empty);
+          return;
+        }
+
+        rows.forEach((row, idx) => {
+          const $li = document.createElement("li");
+          $li.className = "death-score-row";
+
+          const $rank = document.createElement("span");
+          $rank.className = "death-score-rank";
+          $rank.textContent = `#${idx + 1}`;
+
+          const $meta = document.createElement("span");
+          $meta.className = "death-score-meta";
+          $meta.textContent = `${normalizePlayerName(row.name)} • ${formatScoreTimestamp(row.timestamp)}`;
+
+          const $value = document.createElement("span");
+          $value.className = "death-score-value";
+          $value.textContent = String(row.score);
+
+          $li.appendChild($rank);
+          $li.appendChild($meta);
+          $li.appendChild($value);
+          $deathScoreboard.appendChild($li);
+        });
+      };
+
+      const showLobbyScreen = () => {
+        activeDeathToken = null;
+        if ($deathScreen) {
+          $deathScreen.classList.remove("active");
+          $deathScreen.classList.add("hidden");
+        }
+        $gameScreen.classList.remove("active");
+        $lobbyScreen.classList.remove("hidden");
+      };
+
+      const showDeathScreen = (finalScore) => {
+        const safeScore = Number(finalScore) || 0;
+        activeDeathToken = `${Date.now()}-${Math.random()}`;
+        const scores = recordScore(safeScore, "Player", activeDeathToken);
+        if ($deathFinalScore) $deathFinalScore.textContent = String(safeScore);
+        renderScoreboard(scores);
+        $gameScreen.classList.remove("active");
+        $lobbyScreen.classList.add("hidden");
+        if ($deathScreen) {
+          $deathScreen.classList.remove("hidden");
+          $deathScreen.classList.add("active");
+        }
+        return scores;
       };
 
       /* ── QR Code ── */
@@ -180,6 +317,7 @@
       };
 
       const init = () => {
+        showLobbyScreen();
         generateQR();
         initSocket();
       };
@@ -306,6 +444,7 @@
 
         socket.on("disconnect", () => {
           setControllerActive(false);
+          showLobbyScreen();
           setConnectionState("disconnected");
         });
 
@@ -316,6 +455,7 @@
             clearVideoStream($otherCamera);
             clearVideoStream($pipCamera);
             if (gameActive) stopGame();
+            showLobbyScreen();
             setControllerActive(false);
             setConnectionState("disconnected");
           }
@@ -378,9 +518,35 @@
           setControllerActive(true);
           updateTelemetry(msg);
         } else if (msg.type === "start-game") {
+          if (msg.deathToken && msg.playerName) {
+            const rows = updateRecordedScoreName(msg.deathToken, msg.playerName);
+            if ($deathScreen && $deathScreen.classList.contains("active")) {
+              renderScoreboard(rows);
+            }
+          }
           if (!gameActive) startGame();
         } else if (msg.type === "stop-game") {
           if (gameActive) stopGame();
+        } else if (msg.type === "return-lobby") {
+          if (msg.deathToken && msg.playerName) {
+            const rows = updateRecordedScoreName(msg.deathToken, msg.playerName);
+            if ($deathScreen && $deathScreen.classList.contains("active")) {
+              renderScoreboard(rows);
+            }
+          }
+          if (gameActive) {
+            stopGame("lobby");
+          } else {
+            showLobbyScreen();
+            if (peer && peer.connected) {
+              peer.send(JSON.stringify({ type: "game-ended" }));
+            }
+          }
+        } else if (msg.type === "score-name") {
+          const rows = updateRecordedScoreName(msg.deathToken, msg.name);
+          if ($deathScreen && $deathScreen.classList.contains("active")) {
+            renderScoreboard(rows);
+          }
         }
       };
 
@@ -391,6 +557,10 @@
         lives = 3;
         round = 0;
         refillCommandBag();
+        if ($deathScreen) {
+          $deathScreen.classList.remove("active");
+          $deathScreen.classList.add("hidden");
+        }
         $lobbyScreen.classList.add("hidden");
         $gameScreen.classList.add("active");
         $commandAction.textContent = "Get Ready…";
@@ -456,9 +626,9 @@
         renderLives();
         showFeedback(`${message}  Lives left: ${lives}`, "wrong");
         if (lives <= 0) {
-          showFeedback("Game Over ☠️", "wrong");
+          showFeedback("Game Over", "wrong");
           setTimeout(() => {
-            if (gameActive) stopGame();
+            if (gameActive) stopGame("death");
           }, 1200);
         }
       };
@@ -489,10 +659,11 @@
         $feedbackDisplay.className = `feedback-display ${type}`;
       };
 
-      const stopGame = () => {
+      const stopGame = (endMode = "lobby") => {
         gameActive = false;
         clearTimeout(commandTimer);
         clearTimeout(roundTimer);
+
         // Reset the phone's speech gate
         if (peer && peer.connected) {
           peer.send(JSON.stringify({
@@ -501,11 +672,29 @@
             text: null,
             simon: false,
           }));
+        }
+
+        if (endMode === "death") {
+          let scores = [];
+          scores = showDeathScreen(score);
+          if (peer && peer.connected) {
+            peer.send(JSON.stringify({
+              type: "game-over",
+              finalScore: score,
+              scoreboard: scores,
+              deathToken: activeDeathToken,
+            }));
+          }
+          syncMusicByState();
+          return;
+        }
+
+        if (peer && peer.connected) {
           peer.send(JSON.stringify({ type: "game-ended" }));
         }
+
         syncMusicByState();
-        $lobbyScreen.classList.remove("hidden");
-        $gameScreen.classList.remove("active");
+        showLobbyScreen();
       };
 
       if ($otherCamera) $otherCamera.addEventListener("click", () => $otherCamera.play());

@@ -144,6 +144,24 @@
       <div id="feedbackDisplay" class="feedback-display"></div>
     </div>
 
+    <div id="deathScreen" class="death-screen hidden">
+      <div class="death-card">
+        <div class="death-kicker">Game Over</div>
+        <h2 class="death-title">Final Results</h2>
+        <div class="death-final-score-row">
+          <span>Final Score</span>
+          <strong id="deathFinalScore">0</strong>
+        </div>
+
+        <h3 class="death-scoreboard-title">Scoreboard</h3>
+        <ol id="deathScoreboard" class="death-scoreboard"></ol>
+
+        <p class="death-hint">
+          Use your phone to choose <strong>Return to Lobby</strong> or <strong>Play Again</strong>.
+        </p>
+      </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"

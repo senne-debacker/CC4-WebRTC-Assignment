@@ -1,4 +1,5 @@
 const $statusBar     = document.getElementById("statusBar");
+const $senderWrap    = document.getElementById("senderWrap");
 const $startBtn      = document.getElementById("startSensorsBtn");
 const $disconnectBtn = document.getElementById("disconnectDeviceBtn");
 const $peerInfo      = document.getElementById("peerInfo");
@@ -7,6 +8,11 @@ const $tapBtnWrap    = document.getElementById("tapBtnWrap");
 const $tapBtns       = document.querySelectorAll(".tap-btn-color");
 const $startGameBtn  = document.getElementById("startGameBtn");
 const $stopGameBtn   = document.getElementById("stopGameBtn");
+const $deathActions  = document.getElementById("deathActions");
+const $deathScoreValue = document.getElementById("deathScoreValue");
+const $deathNameInput = document.getElementById("deathNameInput");
+const $returnLobbyBtn = document.getElementById("returnLobbyBtn");
+const $playAgainBtn = document.getElementById("playAgainBtn");
 const $phoneCommandDisplay = document.getElementById("phoneCommandDisplay");
 const $phoneCommandPrefix = document.getElementById("phoneCommandPrefix");
 const $phoneCommandText = document.getElementById("phoneCommandText");
@@ -24,7 +30,9 @@ let tapPulseUntil = 0;
 let lastTapColor = null;
 let latestGyro = { alpha: 0, beta: 0, gamma: 0 };
 let latestAccel = { x: 0, y: 0, z: 0 };
+let activeDeathToken = null;
 const COMMAND_ARM_DELAY = 350;
+const PLAYER_NAME_STORAGE_KEY = "simonSaysPlayerNameV1";
 
 const sendPeerMessage = (message) => {
   if (peer && peer.connected) {
@@ -66,6 +74,91 @@ const updatePhoneUiByGameState = () => {
   if ($sensorInfo) $sensorInfo.classList.toggle("hide-during-game", hideLobbyControls);
 };
 
+const normalizePlayerName = (name) => {
+  const cleaned = String(name || "").trim().replace(/\s+/g, " ");
+  return cleaned.slice(0, 20) || "Player";
+};
+
+const getScoreboardName = () => {
+  if ($deathNameInput) return normalizePlayerName($deathNameInput.value);
+  return "Player";
+};
+
+const storeScoreboardName = (name) => {
+  try {
+    localStorage.setItem(PLAYER_NAME_STORAGE_KEY, normalizePlayerName(name));
+  } catch {
+    // Ignore storage failures on mobile browsers.
+  }
+};
+
+const loadStoredScoreboardName = () => {
+  try {
+    return normalizePlayerName(localStorage.getItem(PLAYER_NAME_STORAGE_KEY) || "Player");
+  } catch {
+    return "Player";
+  }
+};
+
+const setDeathMode = (active) => {
+  if ($senderWrap) $senderWrap.classList.toggle("death-mode", !!active);
+};
+
+const sendScoreNameToReceiver = () => {
+  if (!(peer && peer.connected) || !activeDeathToken) return;
+  const playerName = getScoreboardName();
+  storeScoreboardName(playerName);
+  peer.send(JSON.stringify({
+    type: "score-name",
+    deathToken: activeDeathToken,
+    name: playerName,
+  }));
+};
+
+const hideDeathActions = () => {
+  if ($deathActions) $deathActions.classList.add("hidden");
+  if ($deathScoreValue) $deathScoreValue.textContent = "0";
+  activeDeathToken = null;
+  setDeathMode(false);
+};
+
+const showDeathActions = (finalScore, deathToken) => {
+  if ($deathScoreValue) {
+    $deathScoreValue.textContent = String(Number(finalScore) || 0);
+  }
+  activeDeathToken = deathToken ? String(deathToken) : null;
+  if ($deathNameInput) {
+    $deathNameInput.value = loadStoredScoreboardName();
+  }
+  if ($deathActions) $deathActions.classList.remove("hidden");
+  setDeathMode(true);
+  sendScoreNameToReceiver();
+};
+
+const beginGameFromPhone = () => {
+  if (!(peer && peer.connected)) return;
+  const playerName = getScoreboardName();
+  storeScoreboardName(playerName);
+  if (activeDeathToken) {
+    peer.send(JSON.stringify({
+      type: "score-name",
+      deathToken: activeDeathToken,
+      name: playerName,
+    }));
+  }
+  gameStarted = true;
+  updatePhoneUiByGameState();
+  setDeathMode(false);
+  if ($deathActions) $deathActions.classList.add("hidden");
+  activeCommandGesture = null;
+  commandArmAt = 0;
+  syncMicTrackEnabled();
+  peer.send(JSON.stringify({ type: "start-game", playerName, deathToken: activeDeathToken }));
+  activeDeathToken = null;
+  $startGameBtn.style.display = "none";
+  $stopGameBtn.style.display = "";
+};
+
 const init = async () => {
   try {
     myStream = await navigator.mediaDevices.getUserMedia({
@@ -98,6 +191,7 @@ const initSocket = () => {
     gameStarted = false;
     speechEnabled = false;
     updatePhoneUiByGameState();
+    hideDeathActions();
     if (telemetryTimer) {
       clearInterval(telemetryTimer);
       telemetryTimer = null;
@@ -132,6 +226,7 @@ const initSocket = () => {
       gameStarted = false;
       speechEnabled = false;
       updatePhoneUiByGameState();
+      hideDeathActions();
       if (telemetryTimer) {
         clearInterval(telemetryTimer);
         telemetryTimer = null;
@@ -167,8 +262,9 @@ const createPeer = (initiator, peerId) => {
   peer.on("connect", () => {
     setPeerInfo(peerId);
     $startBtn.disabled = false;
-    $startGameBtn.disabled = false;
+    $startGameBtn.disabled = !sensorsActive;
     if ($disconnectBtn) $disconnectBtn.disabled = false;
+    hideDeathActions();
   });
 
   peer.on("stream", () => {/* Sender doesn't render remote stream */});
@@ -193,8 +289,18 @@ const createPeer = (initiator, peerId) => {
       commandArmAt = 0;
       syncMicTrackEnabled();
       updatePhoneUiByGameState();
+      hideDeathActions();
       $stopGameBtn.style.display  = "none";
       $startGameBtn.style.display = "";
+    } else if (msg.type === "game-over") {
+      gameStarted = false;
+      activeCommandGesture = null;
+      commandArmAt = 0;
+      syncMicTrackEnabled();
+      updatePhoneUiByGameState();
+      $stopGameBtn.style.display  = "none";
+      $startGameBtn.style.display = "";
+      showDeathActions(msg.finalScore, msg.deathToken);
     }
   });
 
@@ -216,6 +322,7 @@ const createPeer = (initiator, peerId) => {
     gameStarted = false;
     speechEnabled = false;
     updatePhoneUiByGameState();
+    hideDeathActions();
     if (telemetryTimer) {
       clearInterval(telemetryTimer);
       telemetryTimer = null;
@@ -251,6 +358,8 @@ $startBtn.addEventListener("click", async () => {
     $startBtn.classList.remove("active");
     $sensorInfo.classList.remove("visible");
     $tapBtnWrap.classList.remove("visible");
+    $startGameBtn.disabled = true;
+    hideDeathActions();
     syncMicTrackEnabled();
     return;
   }
@@ -276,16 +385,7 @@ $tapBtns.forEach(($btn) => {
 });
 
 $startGameBtn.addEventListener("click", () => {
-  if (peer && peer.connected) {
-    gameStarted = true;
-    updatePhoneUiByGameState();
-    activeCommandGesture = null;
-    commandArmAt = 0;
-    syncMicTrackEnabled();
-    peer.send(JSON.stringify({ type: "start-game" }));
-    $startGameBtn.style.display = "none";
-    $stopGameBtn.style.display  = "";
-  }
+  beginGameFromPhone();
 });
 
 $stopGameBtn.addEventListener("click", () => {
@@ -295,11 +395,49 @@ $stopGameBtn.addEventListener("click", () => {
     activeCommandGesture = null;
     commandArmAt = 0;
     syncMicTrackEnabled();
+    hideDeathActions();
     peer.send(JSON.stringify({ type: "stop-game" }));
     $stopGameBtn.style.display  = "none";
     $startGameBtn.style.display = "";
   }
 });
+
+if ($returnLobbyBtn) {
+  $returnLobbyBtn.addEventListener("click", () => {
+    if (!(peer && peer.connected)) return;
+    const deathToken = activeDeathToken;
+    const playerName = getScoreboardName();
+    storeScoreboardName(playerName);
+    if (deathToken) {
+      peer.send(JSON.stringify({
+        type: "score-name",
+        deathToken,
+        name: playerName,
+      }));
+    }
+    gameStarted = false;
+    updatePhoneUiByGameState();
+    activeCommandGesture = null;
+    commandArmAt = 0;
+    syncMicTrackEnabled();
+    hideDeathActions();
+    peer.send(JSON.stringify({ type: "return-lobby", playerName, deathToken }));
+    $stopGameBtn.style.display  = "none";
+    $startGameBtn.style.display = "";
+  });
+}
+
+if ($playAgainBtn) {
+  $playAgainBtn.addEventListener("click", () => {
+    beginGameFromPhone();
+  });
+}
+
+if ($deathNameInput) {
+  $deathNameInput.addEventListener("input", () => {
+    sendScoreNameToReceiver();
+  });
+}
 
 const requestSensorPermission = async () => {
   try {
@@ -327,9 +465,11 @@ const requestSensorPermission = async () => {
 const activateSensors = () => {
   sensorsActive = true;
   gameStarted = false;
+  hideDeathActions();
   updatePhoneUiByGameState();
   sendControllerState(true);
   syncMicTrackEnabled();
+  $startGameBtn.disabled = !(peer && peer.connected);
   $startBtn.textContent = "Stop Controller Mode";
   $startBtn.classList.add("active");
   $sensorInfo.classList.add("visible");

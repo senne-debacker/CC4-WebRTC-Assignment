@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="sender.css" />
   </head>
   <body>
-    <div class="sender-wrap">
+    <div id="senderWrap" class="sender-wrap">
       <div class="sender-hero">
         <h1 class="sender-title">Simon Says</h1>
         <p class="sender-subtitle">Controller</p>
@@ -47,6 +47,21 @@
       <div id="gameCtrlWrap" class="game-ctrl-wrap">
         <button id="startGameBtn" class="btn-game" disabled>Start Game</button>
         <button id="stopGameBtn" class="btn-game btn-game-stop" style="display:none">End Game</button>
+      </div>
+
+      <div id="deathActions" class="death-actions hidden">
+        <div class="death-actions-score">Final Score: <span id="deathScoreValue">0</span></div>
+        <label for="deathNameInput" class="death-actions-label">Scoreboard Name</label>
+        <input
+          id="deathNameInput"
+          class="death-actions-input"
+          type="text"
+          maxlength="20"
+          placeholder="Enter your name"
+          autocomplete="name"
+        />
+        <button id="returnLobbyBtn" class="btn-game btn-game-return">Return to Lobby</button>
+        <button id="playAgainBtn" class="btn-game btn-game-play-again">Play Again</button>
       </div>
     </div>
 

@@ -65,6 +65,14 @@ body::before {
   padding: 20px 20px 24px;
 }
 
+.sender-wrap.death-mode > * {
+  display: none !important;
+}
+
+.sender-wrap.death-mode > .death-actions {
+  display: flex !important;
+}
+
 /* ══════════════════════════════════════
    Hero — compact, icon-led
    ══════════════════════════════════════ */
@@ -424,4 +432,74 @@ body::before {
 .btn-game-stop {
   background: linear-gradient(135deg, var(--red), #7b241c);
   box-shadow: 0 0 0 1px rgba(231, 76, 60, 0.35), 0 6px 24px rgba(231, 76, 60, 0.28);
+}
+
+.death-actions {
+  margin-top: 12px;
+  border: 1px solid rgba(231, 76, 60, 0.35);
+  background: linear-gradient(160deg, rgba(231, 76, 60, 0.12), rgba(17, 28, 48, 0.85));
+  border-radius: 2px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.death-actions.hidden {
+  display: none !important;
+}
+
+.death-actions-score {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 8px 10px;
+  border-radius: 2px;
+}
+
+.death-actions-score span {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.death-actions-label {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.death-actions-input {
+  width: 100%;
+  border: 1px solid var(--border-md);
+  border-radius: 2px;
+  padding: 12px 10px;
+  background: rgba(12, 18, 32, 0.8);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+}
+
+.death-actions-input::placeholder {
+  color: var(--muted);
+}
+
+.death-actions-input:focus {
+  outline: none;
+  border-color: rgba(46, 204, 113, 0.8);
+  box-shadow: 0 0 0 1px rgba(46, 204, 113, 0.35);
+}
+
+.btn-game-return {
+  background: linear-gradient(135deg, #1f2e46, #172233);
+  box-shadow: 0 0 0 1px rgba(80, 104, 137, 0.35), 0 6px 22px rgba(0, 0, 0, 0.28);
+}
+
+.btn-game-play-again {
+  background: linear-gradient(135deg, var(--green), #1e8449);
+  box-shadow: 0 0 0 1px rgba(46, 204, 113, 0.35), 0 6px 24px rgba(46, 204, 113, 0.28);
 }
