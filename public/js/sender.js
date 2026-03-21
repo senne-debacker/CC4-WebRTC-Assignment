@@ -1,5 +1,6 @@
       const $statusBar     = document.getElementById("statusBar");
       const $startBtn      = document.getElementById("startSensorsBtn");
+      const $disconnectBtn = document.getElementById("disconnectDeviceBtn");
       const $peerInfo      = document.getElementById("peerInfo");
       const $sensorInfo    = document.getElementById("sensorInfo");
       const $tapBtnWrap    = document.getElementById("tapBtnWrap");
@@ -59,6 +60,7 @@
       const updatePhoneUiByGameState = () => {
         const hideLobbyControls = gameStarted;
         if ($startBtn) $startBtn.classList.toggle("hide-during-game", hideLobbyControls);
+        if ($disconnectBtn) $disconnectBtn.classList.toggle("hide-during-game", hideLobbyControls);
         if ($statusBar) $statusBar.classList.toggle("hide-during-game", hideLobbyControls);
         if ($peerInfo) $peerInfo.classList.toggle("hide-during-game", hideLobbyControls);
         if ($sensorInfo) $sensorInfo.classList.toggle("hide-during-game", hideLobbyControls);
@@ -85,6 +87,7 @@
         socket.on("connect", () => {
           $statusBar.textContent = `Connected — My ID: ${socket.id}`;
           $statusBar.className = "status connected";
+          if ($disconnectBtn) $disconnectBtn.disabled = !peer;
         });
 
         socket.on("disconnect", () => {
@@ -101,6 +104,7 @@
             telemetryTimer = null;
           }
           if (myStream) myStream.getAudioTracks().forEach(t => { t.enabled = false; });
+          if ($disconnectBtn) $disconnectBtn.disabled = true;
         });
 
         /* Auto-connect: pick the first available peer */
@@ -135,6 +139,7 @@
               telemetryTimer = null;
             }
             if (myStream) myStream.getAudioTracks().forEach(t => { t.enabled = false; });
+            if ($disconnectBtn) $disconnectBtn.disabled = true;
           }
         });
 
@@ -165,6 +170,7 @@
           setPeerInfo(peerId);
           $startBtn.disabled = false;
           $startGameBtn.disabled = false;
+          if ($disconnectBtn) $disconnectBtn.disabled = false;
         });
 
         peer.on("stream", () => {/* Sender doesn't render remote stream */});
@@ -221,6 +227,7 @@
               telemetryTimer = null;
             }
             if (myStream) myStream.getAudioTracks().forEach(t => { t.enabled = false; });
+            if ($disconnectBtn) $disconnectBtn.disabled = true;
         });
 
         peer.on("error", (err) => console.error("Peer error:", err));
@@ -255,6 +262,11 @@
           return;
         }
         await requestSensorPermission();
+      });
+
+      $disconnectBtn.addEventListener("click", () => {
+        if (!peer) return;
+        peer.destroy();
       });
 
       $tapBtns.forEach(($btn) => {

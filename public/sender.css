@@ -280,6 +280,18 @@ body::before {
   box-shadow: 0 0 0 1px rgba(231, 76, 60, 0.35), 0 6px 24px rgba(231, 76, 60, 0.28);
 }
 
+.btn-disconnect {
+  margin-top: -2px;
+  padding: 14px;
+  font-size: 1.35rem;
+  background: linear-gradient(135deg, #7f8c8d, #4b5556);
+  box-shadow: 0 0 0 1px rgba(127, 140, 141, 0.35), 0 4px 18px rgba(75, 85, 86, 0.3);
+}
+
+.btn-disconnect:not(:disabled):hover {
+  box-shadow: 0 0 0 1px rgba(127, 140, 141, 0.55), 0 8px 24px rgba(75, 85, 86, 0.45);
+}
+
 /* ══════════════════════════════════════
    Sensor info strip
    ══════════════════════════════════════ */
