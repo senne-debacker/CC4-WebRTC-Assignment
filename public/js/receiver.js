@@ -10,6 +10,7 @@
       const $gameScore      = document.getElementById("gameScore");
       const $gameRound      = document.getElementById("gameRound");
       const $gameLives      = document.getElementById("gameLives");
+      const $startCountdown = document.getElementById("startCountdown");
       const $deathFinalScore = document.getElementById("deathFinalScore");
       const $deathScoreboard = document.getElementById("deathScoreboard");
       const $lobbyScoreboard = document.getElementById("lobbyScoreboard");
@@ -68,6 +69,7 @@
       let gameActive = false;
       let commandTimer = null;
       let roundTimer = null;
+      let introTimers = [];
       let score = 0;
       let lives = 3;
       let round = 0;
@@ -153,13 +155,74 @@
         });
       };
 
+      const resetStartCountdown = () => {
+        if (!$startCountdown) return;
+        $startCountdown.classList.add("hidden");
+        $startCountdown.classList.remove("all-green");
+        $startCountdown.querySelectorAll(".count-dot").forEach(($dot) => {
+          $dot.classList.remove("red", "green");
+        });
+      };
+
+      const clearIntroTimers = () => {
+        introTimers.forEach((t) => clearTimeout(t));
+        introTimers = [];
+      };
+
+      const startIntroAnimation = () => {
+        clearIntroTimers();
+        resetStartCountdown();
+        $commandPrefix.textContent = "";
+        $commandPrefix.className = "command-prefix";
+        $commandAction.textContent = "Get Ready…";
+
+        if (!$startCountdown) return;
+        const $dots = Array.from($startCountdown.querySelectorAll(".count-dot"));
+
+        introTimers.push(setTimeout(() => {
+          if (!gameActive) return;
+          $commandAction.textContent = "";
+          $startCountdown.classList.remove("hidden");
+        }, 4000));
+
+        introTimers.push(setTimeout(() => {
+          if (!gameActive || !$dots[0]) return;
+          $dots[0].classList.add("red");
+        }, 4800));
+
+        introTimers.push(setTimeout(() => {
+          if (!gameActive || !$dots[1]) return;
+          $dots[1].classList.add("red");
+        }, 5200));
+
+        introTimers.push(setTimeout(() => {
+          if (!gameActive || !$dots[2]) return;
+          $dots[2].classList.add("red");
+        }, 5600));
+
+        introTimers.push(setTimeout(() => {
+          if (!gameActive) return;
+          $startCountdown.classList.add("all-green");
+          $dots.forEach(($dot) => {
+            $dot.classList.remove("red");
+            $dot.classList.add("green");
+          });
+        }, 6000));
+
+        introTimers.push(setTimeout(() => {
+          if (!gameActive) return;
+          resetStartCountdown();
+          nextCommand();
+        }, 6400));
+      };
+
       const BASE_ACTION_MS = 3000;
       const BASE_GAP_MS = 2000;
-      const SPEED_STEP_ROUNDS = 3;
-      const ACTION_REDUCTION_PER_STEP = 250;
-      const GAP_REDUCTION_PER_STEP = 150;
-      const MIN_ACTION_MS = 1400;
-      const MIN_GAP_MS = 900;
+      const SPEED_STEP_ROUNDS = 4;
+      const ACTION_REDUCTION_PER_STEP = 180;
+      const GAP_REDUCTION_PER_STEP = 100;
+      const MIN_ACTION_MS = 1500;
+      const MIN_GAP_MS = 1000;
       const SCOREBOARD_STORAGE_KEY = "simonSaysScoreboardV1";
       const SCOREBOARD_LIMIT = 8;
       let activeDeathToken = null;
@@ -648,16 +711,13 @@
         }
         $lobbyScreen.classList.add("hidden");
         $gameScreen.classList.add("active");
-        $commandAction.textContent = "Get Ready…";
-        $commandPrefix.textContent = "";
         $feedbackDisplay.textContent = "";
         $feedbackDisplay.className = "feedback-display";
         $gameScore.textContent = "Score: 0";
         $gameRound.textContent = "";
         renderLives();
         syncMusicByState();
-
-        commandTimer = setTimeout(nextCommand, 2000);
+        startIntroAnimation();
       };
 
       const nextCommand = () => {
@@ -778,6 +838,8 @@
         gameActive = false;
         clearTimeout(commandTimer);
         clearTimeout(roundTimer);
+        clearIntroTimers();
+        resetStartCountdown();
 
         // Reset the phone's speech gate
         if (peer && peer.connected) {
