@@ -127,6 +127,16 @@
   display: block;
 }
 
+/* Small connected banner shown where the QR usually is */
+.connected-banner {
+  padding: 10px 14px;
+  background: linear-gradient(90deg, #2ecc71, #27ae60);
+  color: #041826;
+  font-weight: 800;
+  border-radius: 8px;
+  text-align: center;
+}
+
 .peer-bar {
   display: flex;
   align-items: center;

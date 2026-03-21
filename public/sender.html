@@ -19,6 +19,11 @@
 
       <div id="peerInfo" class="peer-info">Looking for a receiver…</div>
 
+      <div id="phoneCommandDisplay" class="phone-command-display hidden">
+        <div id="phoneCommandPrefix" class="command-prefix"></div>
+        <div id="phoneCommandText" class="command-action">Waiting…</div>
+      </div>
+
       <button id="startSensorsBtn" class="btn-controller" disabled>
         Start Controller Mode
       </button>
@@ -53,6 +58,9 @@
       const $tapBtn        = document.getElementById("tapBtn");
       const $startGameBtn  = document.getElementById("startGameBtn");
       const $stopGameBtn   = document.getElementById("stopGameBtn");
+      const $phoneCommandDisplay = document.getElementById("phoneCommandDisplay");
+      const $phoneCommandPrefix = document.getElementById("phoneCommandPrefix");
+      const $phoneCommandText = document.getElementById("phoneCommandText");
 
       let socket, myStream, peer;
       let sensorsActive = false;
@@ -163,6 +171,21 @@
             speechEnabled = activeCommandGesture === "speech";
             if (myStream) {
               myStream.getAudioTracks().forEach(t => { t.enabled = speechEnabled; });
+            }
+
+            // Emoji map for nicer phone UI
+            const EMOJI = {
+              tap: '🤳', jump: '🦘', duck: '🦆', left: '⬅️', right: '➡️', spin: '🌀', shake: '📱', speech: '🗣️'
+            };
+
+            // show the command text and simon prefix on the phone UI
+            if (msg.text) {
+              const emoji = EMOJI[msg.gesture] || '';
+              $phoneCommandPrefix.textContent = msg.simon ? "Simon says…" : "";
+              $phoneCommandText.innerHTML = `${emoji} ${msg.text}`;
+              $phoneCommandDisplay.classList.remove("hidden");
+            } else {
+              $phoneCommandDisplay.classList.add("hidden");
             }
           }
         });
