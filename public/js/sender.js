@@ -180,16 +180,9 @@ const createPeer = (initiator, peerId) => {
       commandArmAt = Date.now() + COMMAND_ARM_DELAY;
       syncMicTrackEnabled();
 
-      const EMOJI = {
-        "tap-green": '🟢', "tap-red": '🔴', "tap-yellow": '🟡', "tap-blue": '🔵',
-        tap: '🤳', jump: '🦘', duck: '🦆', left: '⬅️', right: '➡️',
-        spin: '🌀', shake: '📱', speech: '🗣️',
-      };
-
       if (msg.text) {
-        const emoji = EMOJI[msg.gesture] || '';
         $phoneCommandPrefix.textContent = msg.simon ? "Simon says…" : "";
-        $phoneCommandText.innerHTML = `${emoji} ${msg.text}`;
+        $phoneCommandText.textContent = msg.text;
         $phoneCommandDisplay.classList.remove("hidden");
       } else {
         $phoneCommandDisplay.classList.add("hidden");
@@ -374,8 +367,8 @@ const activateSensors = () => {
   let verticalPhase = "idle";
   let verticalStart = 0;
   const VERTICAL_TIMEOUT = 1500;
-  const VERT_HIGH = 8.5;
-  const VERT_LOW  = 4;
+  const VERT_HIGH = 16;  // sharp impact / push-off — well above resting gravity (~9.8)
+  const VERT_LOW  = 6;   // freefall threshold — raised slightly to reduce false triggers
 
   /* ── Spin state ── */
   let spinAccum = 0;
@@ -461,9 +454,10 @@ const activateSensors = () => {
           if (activeCommandGesture === "jump" && mag > VERT_HIGH) {
             verticalPhase = "jump-push";
             verticalStart = now;
-          } else if (activeCommandGesture === "duck" && mag < VERT_LOW) {
-            verticalPhase = "duck-drop";
-            verticalStart = now;
+          } else if (activeCommandGesture === "duck" && mag > VERT_HIGH) {
+            // Duck = sudden crouch impact spike — single phase, fires immediately
+            verticalPhase = "idle";
+            sendGesture("duck");
           }
           break;
         case "jump-push":
@@ -473,12 +467,6 @@ const activateSensors = () => {
           if (mag > VERT_HIGH) {
             verticalPhase = "idle";
             sendGesture("jump");
-          }
-          break;
-        case "duck-drop":
-          if (mag > VERT_HIGH) {
-            verticalPhase = "idle";
-            sendGesture("duck");
           }
           break;
       }
