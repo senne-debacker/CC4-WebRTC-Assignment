@@ -40,10 +40,71 @@
 
         <!-- Right: connection -->
         <div class="lobby-connect">
-          <div class="qr-section">
+          <div id="qrSection" class="qr-section">
             <h2>Scan to Join</h2>
             <div id="qrcode"></div>
             <p id="urlDisplay"></p>
+          </div>
+
+          <div id="telemetryPanel" class="telemetry-panel hidden" aria-live="polite">
+            <h2>Controller Telemetry</h2>
+
+            <div class="telemetry-grid">
+              <div class="telemetry-card">
+                <div class="telemetry-label">Microphone Input</div>
+                <div class="meter-track">
+                  <div id="telemetryMicFill" class="meter-fill"></div>
+                </div>
+                <div id="telemetryMicValue" class="telemetry-value">0%</div>
+              </div>
+
+              <div id="telemetryTapCard" class="telemetry-card">
+                <div class="telemetry-label">Tap Registration</div>
+                <div class="tap-indicator-row">
+                  <div id="telemetryTapDot" class="tap-dot"></div>
+                  <div id="telemetryTapStatus" class="telemetry-value">Idle</div>
+                </div>
+                <div id="telemetryTapCount" class="telemetry-subvalue">Count: 0</div>
+              </div>
+
+              <div class="telemetry-card telemetry-card-wide">
+                <div class="telemetry-label">Gyroscope (alpha / beta / gamma)</div>
+                <div class="axis-row">
+                  <span class="axis-name">A</span>
+                  <div class="axis-track"><div id="gyroAlphaMarker" class="axis-marker"></div></div>
+                  <span id="gyroAlphaValue" class="axis-value">0.0°</span>
+                </div>
+                <div class="axis-row">
+                  <span class="axis-name">B</span>
+                  <div class="axis-track"><div id="gyroBetaMarker" class="axis-marker"></div></div>
+                  <span id="gyroBetaValue" class="axis-value">0.0°</span>
+                </div>
+                <div class="axis-row">
+                  <span class="axis-name">G</span>
+                  <div class="axis-track"><div id="gyroGammaMarker" class="axis-marker"></div></div>
+                  <span id="gyroGammaValue" class="axis-value">0.0°</span>
+                </div>
+              </div>
+
+              <div class="telemetry-card telemetry-card-wide">
+                <div class="telemetry-label">Accelerometer (x / y / z)</div>
+                <div class="axis-row">
+                  <span class="axis-name">X</span>
+                  <div class="axis-track"><div id="accelXMarker" class="axis-marker"></div></div>
+                  <span id="accelXValue" class="axis-value">0.00</span>
+                </div>
+                <div class="axis-row">
+                  <span class="axis-name">Y</span>
+                  <div class="axis-track"><div id="accelYMarker" class="axis-marker"></div></div>
+                  <span id="accelYValue" class="axis-value">0.00</span>
+                </div>
+                <div class="axis-row">
+                  <span class="axis-name">Z</span>
+                  <div class="axis-track"><div id="accelZMarker" class="axis-marker"></div></div>
+                  <span id="accelZValue" class="axis-value">0.00</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

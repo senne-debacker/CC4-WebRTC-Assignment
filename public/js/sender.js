@@ -13,9 +13,46 @@
       let socket, myStream, peer;
       let sensorsActive = false;
       let speechEnabled = false;   // true only when the current command is "Say something!"
+      let gameStarted = false;
       let activeCommandGesture = null;
       let commandArmAt = 0;
+      let telemetryTimer = null;
+      let latestMicLevel = 0;
+      let tapCount = 0;
+      let tapPulseUntil = 0;
+      let latestGyro = { alpha: 0, beta: 0, gamma: 0 };
+      let latestAccel = { x: 0, y: 0, z: 0 };
       const COMMAND_ARM_DELAY = 350;
+
+      const sendPeerMessage = (message) => {
+        if (peer && peer.connected) {
+          peer.send(JSON.stringify(message));
+        }
+      };
+
+      const sendControllerState = (active) => {
+        sendPeerMessage({ type: "controller-state", active: !!active });
+      };
+
+      const sendTelemetrySnapshot = () => {
+        sendPeerMessage({
+          type: "telemetry",
+          mic: latestMicLevel,
+          tap: {
+            count: tapCount,
+            active: Date.now() < tapPulseUntil,
+          },
+          gyro: latestGyro,
+          accel: latestAccel,
+        });
+      };
+
+      const syncMicTrackEnabled = () => {
+        const lobbyMicActive = sensorsActive && !gameStarted;
+        const speechGateActive = activeCommandGesture === "speech" && Date.now() >= commandArmAt;
+        speechEnabled = lobbyMicActive || speechGateActive;
+        if (myStream) myStream.getAudioTracks().forEach(t => { t.enabled = speechEnabled; });
+      };
 
       const init = async () => {
         try {
@@ -46,7 +83,12 @@
           setPeerInfo(null);
           activeCommandGesture = null;
           commandArmAt = 0;
+          gameStarted = false;
           speechEnabled = false;
+          if (telemetryTimer) {
+            clearInterval(telemetryTimer);
+            telemetryTimer = null;
+          }
           if (myStream) myStream.getAudioTracks().forEach(t => { t.enabled = false; });
         });
 
@@ -74,7 +116,12 @@
             $stopGameBtn.style.display  = "none";
             activeCommandGesture = null;
             commandArmAt = 0;
+            gameStarted = false;
             speechEnabled = false;
+            if (telemetryTimer) {
+              clearInterval(telemetryTimer);
+              telemetryTimer = null;
+            }
             if (myStream) myStream.getAudioTracks().forEach(t => { t.enabled = false; });
           }
         });
@@ -116,10 +163,7 @@
           if (msg.type === "command") {
             activeCommandGesture = msg.gesture || null;
             commandArmAt = Date.now() + COMMAND_ARM_DELAY;
-            speechEnabled = activeCommandGesture === "speech";
-            if (myStream) {
-              myStream.getAudioTracks().forEach(t => { t.enabled = speechEnabled; });
-            }
+            syncMicTrackEnabled();
 
             // Emoji map for nicer phone UI
             const EMOJI = {
@@ -153,7 +197,12 @@
           sensorsActive = false;
             activeCommandGesture = null;
             commandArmAt = 0;
+            gameStarted = false;
             speechEnabled = false;
+            if (telemetryTimer) {
+              clearInterval(telemetryTimer);
+              telemetryTimer = null;
+            }
             if (myStream) myStream.getAudioTracks().forEach(t => { t.enabled = false; });
         });
 
@@ -174,10 +223,17 @@
       $startBtn.addEventListener("click", async () => {
         if (sensorsActive) {
           sensorsActive = false;
+          gameStarted = false;
+          sendControllerState(false);
+          if (telemetryTimer) {
+            clearInterval(telemetryTimer);
+            telemetryTimer = null;
+          }
           $startBtn.textContent = "Start Controller Mode";
           $startBtn.classList.remove("active");
           $sensorInfo.classList.remove("visible");
           $tapBtnWrap.classList.remove("visible");
+          syncMicTrackEnabled();
           return;
         }
         await requestSensorPermission();
@@ -185,14 +241,19 @@
 
       $tapBtn.addEventListener("click", () => {
         if (peer && peer.connected) {
+          tapCount += 1;
+          tapPulseUntil = Date.now() + 300;
           peer.send(JSON.stringify({ type: "button" }));
+          sendTelemetrySnapshot();
         }
       });
 
       $startGameBtn.addEventListener("click", () => {
         if (peer && peer.connected) {
+          gameStarted = true;
           activeCommandGesture = null;
           commandArmAt = 0;
+          syncMicTrackEnabled();
           peer.send(JSON.stringify({ type: "start-game" }));
           $startGameBtn.style.display = "none";
           $stopGameBtn.style.display  = "";
@@ -201,8 +262,10 @@
 
       $stopGameBtn.addEventListener("click", () => {
         if (peer && peer.connected) {
+          gameStarted = false;
           activeCommandGesture = null;
           commandArmAt = 0;
+          syncMicTrackEnabled();
           peer.send(JSON.stringify({ type: "stop-game" }));
           $stopGameBtn.style.display  = "none";
           $startGameBtn.style.display = "";
@@ -234,12 +297,19 @@
 
       const activateSensors = () => {
         sensorsActive = true;
+        gameStarted = false;
+        sendControllerState(true);
+        syncMicTrackEnabled();
         $startBtn.textContent = "Stop Controller Mode";
         $startBtn.classList.add("active");
         $sensorInfo.classList.add("visible");
         $tapBtnWrap.classList.add("visible");
 
-        let lastAccel = { ax: 0, ay: 0, az: 0 };
+        if (telemetryTimer) clearInterval(telemetryTimer);
+        telemetryTimer = setInterval(() => {
+          if (!sensorsActive) return;
+          sendTelemetrySnapshot();
+        }, 120);
 
         /* ── Gesture detection state ── */
         let lastGestureTime = 0;
@@ -305,10 +375,10 @@
 
           const a = event.acceleration || event.accelerationIncludingGravity;
           if (a) {
-            lastAccel = {
-              ax: a.x?.toFixed(2) ?? 0,
-              ay: a.y?.toFixed(2) ?? 0,
-              az: a.z?.toFixed(2) ?? 0,
+            latestAccel = {
+              x: Number(a.x || 0),
+              y: Number(a.y || 0),
+              z: Number(a.z || 0),
             };
           }
 
@@ -395,14 +465,11 @@
         window.addEventListener("deviceorientation", (event) => {
           if (!sensorsActive || !(peer && peer.connected)) return;
 
-          // Send raw telemetry
-          peer.send(JSON.stringify({
-            type: "gyro",
-            alpha: event.alpha?.toFixed(1) ?? 0,
-            beta:  event.beta?.toFixed(1)  ?? 0,
-            gamma: event.gamma?.toFixed(1) ?? 0,
-            ...lastAccel,
-          }));
+          latestGyro = {
+            alpha: Number(event.alpha || 0),
+            beta: Number(event.beta || 0),
+            gamma: Number(event.gamma || 0),
+          };
 
           const commandArmed = !!activeCommandGesture && Date.now() >= commandArmAt;
           if (!commandArmed) {
@@ -492,8 +559,7 @@
 
               // Keep speech detector aligned with the current command at all times.
               const syncSpeechGate = () => {
-                speechEnabled = activeCommandGesture === "speech" && Date.now() >= commandArmAt;
-                if (myStream) myStream.getAudioTracks().forEach(t => { t.enabled = speechEnabled; });
+                syncMicTrackEnabled();
               };
 
               const source = audioCtx.createMediaStreamSource(myStream);
@@ -518,6 +584,7 @@
                 let sumSq = 0;
                 for (let i = 0; i < buf.length; i++) sumSq += buf[i] * buf[i];
                 const rms = Math.sqrt(sumSq / buf.length);
+                latestMicLevel = Math.min(1, rms / 0.12);
                 if (rms > 0.05 && !speaking && speechEnabled) {
                   speaking = true;
                   sendGesture("speech");

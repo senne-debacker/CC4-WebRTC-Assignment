@@ -11,11 +11,32 @@
       const $pipCamera      = document.getElementById("pipCamera");
       const $qrcode         = document.getElementById("qrcode");
       const $urlDisplay     = document.getElementById("urlDisplay");
-      const $lobbyConnect   = document.querySelector(".qr-section");
+      const $lobbyConnect   = document.querySelector(".lobby-connect");
+      const $qrSection      = document.getElementById("qrSection");
+      const $telemetryPanel = document.getElementById("telemetryPanel");
       const $instructionsDefault = document.getElementById("instructionsDefault");
       const $instructionsConnected = document.getElementById("instructionsConnected");
+      const $telemetryMicFill = document.getElementById("telemetryMicFill");
+      const $telemetryMicValue = document.getElementById("telemetryMicValue");
+      const $telemetryTapCard = document.getElementById("telemetryTapCard");
+      const $telemetryTapDot = document.getElementById("telemetryTapDot");
+      const $telemetryTapStatus = document.getElementById("telemetryTapStatus");
+      const $telemetryTapCount = document.getElementById("telemetryTapCount");
+      const $gyroAlphaMarker = document.getElementById("gyroAlphaMarker");
+      const $gyroBetaMarker = document.getElementById("gyroBetaMarker");
+      const $gyroGammaMarker = document.getElementById("gyroGammaMarker");
+      const $gyroAlphaValue = document.getElementById("gyroAlphaValue");
+      const $gyroBetaValue = document.getElementById("gyroBetaValue");
+      const $gyroGammaValue = document.getElementById("gyroGammaValue");
+      const $accelXMarker = document.getElementById("accelXMarker");
+      const $accelYMarker = document.getElementById("accelYMarker");
+      const $accelZMarker = document.getElementById("accelZMarker");
+      const $accelXValue = document.getElementById("accelXValue");
+      const $accelYValue = document.getElementById("accelYValue");
+      const $accelZValue = document.getElementById("accelZValue");
 
       let socket, peer;
+      let controllerActive = false;
 
       /* ── Game State ── */
       const COMMANDS = [
@@ -85,19 +106,93 @@
         if ($el) $el.srcObject = stream;
       };
 
+      const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+      const setAxisMarker = ($marker, rawValue, maxAbs) => {
+        if (!$marker) return;
+        const value = Number(rawValue) || 0;
+        const pct = ((clamp(value, -maxAbs, maxAbs) + maxAbs) / (maxAbs * 2)) * 100;
+        $marker.style.left = `${pct.toFixed(1)}%`;
+      };
+
+      const resetTelemetry = () => {
+        if ($telemetryMicFill) $telemetryMicFill.style.width = "0%";
+        if ($telemetryMicValue) $telemetryMicValue.textContent = "0%";
+        if ($telemetryTapDot) $telemetryTapDot.classList.remove("active");
+        if ($telemetryTapStatus) $telemetryTapStatus.textContent = "Idle";
+        if ($telemetryTapCount) $telemetryTapCount.textContent = "Count: 0";
+
+        setAxisMarker($gyroAlphaMarker, 0, 180);
+        setAxisMarker($gyroBetaMarker, 0, 180);
+        setAxisMarker($gyroGammaMarker, 0, 180);
+        if ($gyroAlphaValue) $gyroAlphaValue.textContent = "0.0°";
+        if ($gyroBetaValue) $gyroBetaValue.textContent = "0.0°";
+        if ($gyroGammaValue) $gyroGammaValue.textContent = "0.0°";
+
+        setAxisMarker($accelXMarker, 0, 20);
+        setAxisMarker($accelYMarker, 0, 20);
+        setAxisMarker($accelZMarker, 0, 20);
+        if ($accelXValue) $accelXValue.textContent = "0.00";
+        if ($accelYValue) $accelYValue.textContent = "0.00";
+        if ($accelZValue) $accelZValue.textContent = "0.00";
+      };
+
+      const updateTelemetry = (payload) => {
+        const mic = clamp(Number(payload.mic) || 0, 0, 1);
+        const micPct = Math.round(mic * 100);
+        if ($telemetryMicFill) $telemetryMicFill.style.width = `${micPct}%`;
+        if ($telemetryMicValue) $telemetryMicValue.textContent = `${micPct}%`;
+
+        const tap = payload.tap || {};
+        if ($telemetryTapDot) $telemetryTapDot.classList.toggle("active", !!tap.active);
+        if ($telemetryTapStatus) $telemetryTapStatus.textContent = tap.active ? "Tap!" : "Idle";
+        if ($telemetryTapCount) $telemetryTapCount.textContent = `Count: ${Number(tap.count) || 0}`;
+
+        const gyro = payload.gyro || {};
+        const alpha = Number(gyro.alpha) || 0;
+        const beta = Number(gyro.beta) || 0;
+        const gamma = Number(gyro.gamma) || 0;
+        setAxisMarker($gyroAlphaMarker, alpha, 180);
+        setAxisMarker($gyroBetaMarker, beta, 180);
+        setAxisMarker($gyroGammaMarker, gamma, 180);
+        if ($gyroAlphaValue) $gyroAlphaValue.textContent = `${alpha.toFixed(1)}°`;
+        if ($gyroBetaValue) $gyroBetaValue.textContent = `${beta.toFixed(1)}°`;
+        if ($gyroGammaValue) $gyroGammaValue.textContent = `${gamma.toFixed(1)}°`;
+
+        const accel = payload.accel || {};
+        const x = Number(accel.x) || 0;
+        const y = Number(accel.y) || 0;
+        const z = Number(accel.z) || 0;
+        setAxisMarker($accelXMarker, x, 20);
+        setAxisMarker($accelYMarker, y, 20);
+        setAxisMarker($accelZMarker, z, 20);
+        if ($accelXValue) $accelXValue.textContent = x.toFixed(2);
+        if ($accelYValue) $accelYValue.textContent = y.toFixed(2);
+        if ($accelZValue) $accelZValue.textContent = z.toFixed(2);
+      };
+
+      const setControllerActive = (active) => {
+        controllerActive = !!active;
+        if (!controllerActive) resetTelemetry();
+        updateLobbyByConnectionState($connectionStatusIcon?.classList.contains("connected") ? "connected" : "connecting");
+      };
+
       const clearVideoStream = ($el) => {
         if ($el) $el.srcObject = null;
       };
 
       const updateLobbyByConnectionState = (state) => {
         const connected = state === "connected";
+        const showTelemetry = connected && controllerActive;
+        const showQr = !showTelemetry;
 
-        // Hide full connection panel while connected; show it otherwise.
-        if ($lobbyConnect) $lobbyConnect.classList.toggle("hidden", connected);
+        if ($lobbyConnect) $lobbyConnect.classList.remove("hidden");
+        if ($qrSection) $qrSection.classList.toggle("hidden", !showQr);
+        if ($telemetryPanel) $telemetryPanel.classList.toggle("hidden", !showTelemetry);
 
         // Keep QR/url fallback toggles in sync for safety.
-        if ($qrcode) $qrcode.classList.toggle("hidden", connected);
-        if ($urlDisplay) $urlDisplay.classList.toggle("hidden", connected);
+        if ($qrcode) $qrcode.classList.toggle("hidden", !showQr);
+        if ($urlDisplay) $urlDisplay.classList.toggle("hidden", !showQr);
 
         // Swap instruction content.
         if ($instructionsDefault) $instructionsDefault.classList.toggle("hidden", connected);
@@ -125,6 +220,7 @@
         });
 
         socket.on("disconnect", () => {
+          setControllerActive(false);
           setConnectionState("disconnected");
         });
 
@@ -135,6 +231,7 @@
             clearVideoStream($otherCamera);
             clearVideoStream($pipCamera);
             if (gameActive) stopGame();
+            setControllerActive(false);
             setConnectionState("disconnected");
           }
         });
@@ -177,6 +274,7 @@
           clearVideoStream($otherCamera);
           clearVideoStream($pipCamera);
           if (gameActive) stopGame();
+          setControllerActive(false);
           setConnectionState("disconnected");
         });
 
@@ -189,6 +287,11 @@
           if (gameActive) handleGameAction("tap");
         } else if (msg.type === "gesture") {
           if (gameActive) handleGameAction(msg.gesture);
+        } else if (msg.type === "controller-state") {
+          setControllerActive(!!msg.active);
+        } else if (msg.type === "telemetry") {
+          setControllerActive(true);
+          updateTelemetry(msg);
         } else if (msg.type === "start-game") {
           if (!gameActive) startGame();
         } else if (msg.type === "stop-game") {
@@ -307,5 +410,7 @@
 
       if ($otherCamera) $otherCamera.addEventListener("click", () => $otherCamera.play());
       if ($pipCamera) $pipCamera.addEventListener("click", () => $pipCamera.play());
+
+      resetTelemetry();
 
       init();
