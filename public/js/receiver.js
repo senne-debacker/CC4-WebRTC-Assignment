@@ -1,6 +1,9 @@
-      /* ── DOM refs ── */
-      const $otherCamera    = document.getElementById("otherCamera");
-      const $connectionStatusIcon = document.getElementById("connectionStatusIcon");
+          /*
+           * File: public/js/receiver.js
+           * Role: Host-side gameplay controller for signaling, state transitions, command timing, scoring, and leaderboards.
+           * Notes: Handles lobby/game/death flows, telemetry rendering, and socket/peer message orchestration.
+           */
+            const $connectionStatusIcon = document.getElementById("connectionStatusIcon");
       const $lobbyScreen    = document.getElementById("lobbyScreen");
       const $gameScreen     = document.getElementById("gameScreen");
       const $deathScreen    = document.getElementById("deathScreen");
@@ -14,7 +17,6 @@
       const $deathFinalScore = document.getElementById("deathFinalScore");
       const $deathScoreboard = document.getElementById("deathScoreboard");
       const $lobbyScoreboard = document.getElementById("lobbyScoreboard");
-      const $pipCamera      = document.getElementById("pipCamera");
       const $qrcode         = document.getElementById("qrcode");
       const $urlDisplay     = document.getElementById("urlDisplay");
       const $lobbyConnect   = document.querySelector(".lobby-connect");
@@ -46,7 +48,7 @@
       let socket, peer;
       let controllerActive = false;
 
-      /* ── Game State ── */
+      
       const COMMANDS = [
         { text: "Press the green button!", gesture: "tap-green" },
         { text: "Press the red button!", gesture: "tap-red" },
@@ -132,7 +134,6 @@
           return;
         }
 
-        // Unlock audio on first user gesture so later autoplay switching works.
         try {
           await lobbyMusic.play();
           lobbyMusic.pause();
@@ -229,7 +230,6 @@
       let pendingDeathEntry = null;
 
       const refillCommandBag = () => {
-        // Fisher-Yates shuffle so every command appears once before repeats.
         commandBag = [...COMMANDS];
         for (let i = commandBag.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
@@ -277,7 +277,6 @@
         try {
           localStorage.setItem(SCOREBOARD_STORAGE_KEY, JSON.stringify(rows));
         } catch {
-          // Ignore storage failures and keep gameplay running.
         }
       };
 
@@ -445,7 +444,7 @@
         return scores;
       };
 
-      /* ── QR Code ── */
+      
       const generateQR = async () => {
         try {
           const res  = await fetch("/api/ip");
@@ -470,11 +469,6 @@
         generateQR();
         initSocket();
       };
-
-      const setVideoStream = ($el, stream) => {
-        if ($el) $el.srcObject = stream;
-      };
-
       const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
       const setAxisMarker = ($marker, rawValue, maxAbs) => {
@@ -548,11 +542,6 @@
         if (!controllerActive) resetTelemetry();
         updateLobbyByConnectionState($connectionStatusIcon?.classList.contains("connected") ? "connected" : "connecting");
       };
-
-      const clearVideoStream = ($el) => {
-        if ($el) $el.srcObject = null;
-      };
-
       const updateLobbyByConnectionState = (state) => {
         const connected = state === "connected";
         const showTelemetry = connected && controllerActive;
@@ -562,11 +551,9 @@
         if ($qrSection) $qrSection.classList.toggle("hidden", !showQr);
         if ($telemetryPanel) $telemetryPanel.classList.toggle("hidden", !showTelemetry);
 
-        // Keep QR/url fallback toggles in sync for safety.
         if ($qrcode) $qrcode.classList.toggle("hidden", !showQr);
         if ($urlDisplay) $urlDisplay.classList.toggle("hidden", !showQr);
 
-        // Swap instruction content.
         if ($instructionsDefault) $instructionsDefault.classList.toggle("hidden", connected);
         if ($instructionsConnected) $instructionsConnected.classList.toggle("hidden", !connected);
       };
@@ -583,7 +570,7 @@
         updateLobbyByConnectionState(state);
       };
 
-      /* ── Socket.io ── */
+      
       const initSocket = () => {
         socket = io.connect("/");
 
@@ -601,8 +588,6 @@
           if (peer && peer.data && peer.data.id === client.id) {
             peer.destroy();
             peer = null;
-            clearVideoStream($otherCamera);
-            clearVideoStream($pipCamera);
             if (gameActive) stopGame();
             showLobbyScreen();
             setControllerActive(false);
@@ -631,12 +616,6 @@
         peer.on("connect", () => {
           setConnectionState("connected");
         });
-
-        peer.on("stream", (stream) => {
-          setVideoStream($otherCamera, stream);
-          setVideoStream($pipCamera, stream);
-        });
-
         peer.on("data", (raw) => {
           const msg = JSON.parse(raw);
           handlePeerMessage(msg);
@@ -645,8 +624,6 @@
         peer.on("close", () => {
           peer.destroy();
           peer = null;
-          clearVideoStream($otherCamera);
-          clearVideoStream($pipCamera);
           if (gameActive) stopGame();
           setControllerActive(false);
           setConnectionState("disconnected");
@@ -655,7 +632,7 @@
         peer.on("error", (err) => console.error("Peer error:", err));
       };
 
-      /* ── Message handling ── */
+      
       const handlePeerMessage = (msg) => {
         if (msg.type === "button") {
           if (gameActive) handleGameAction(`tap-${msg.color || "unknown"}`);
@@ -698,7 +675,7 @@
         }
       };
 
-      /* ── Game Logic ── */
+      
       const startGame = () => {
         gameActive = true;
         score = 0;
@@ -747,7 +724,6 @@
           };
         }
 
-        // Tell the phone which gesture is expected so it can gate speech detection
         if (peer && peer.connected) {
           peer.send(JSON.stringify({
             type: "command",
@@ -799,7 +775,6 @@
           ? currentCommand.gestures
           : [currentCommand.gesture];
 
-        // resolve human-friendly label for the performed gesture
         const performed = (COMMANDS.find(c => c.gesture === gesture) || { text: gesture }).text;
 
         if (!requiredGestures.includes(gesture)) {
@@ -841,7 +816,6 @@
         clearIntroTimers();
         resetStartCountdown();
 
-        // Reset the phone's speech gate
         if (peer && peer.connected) {
           peer.send(JSON.stringify({
             type: "command",
@@ -874,9 +848,6 @@
         syncMusicByState();
         showLobbyScreen();
       };
-
-      if ($otherCamera) $otherCamera.addEventListener("click", () => $otherCamera.play());
-      if ($pipCamera) $pipCamera.addEventListener("click", () => $pipCamera.play());
       if ($enableMusicToggle) {
         $enableMusicToggle.addEventListener("change", (e) => {
           setMusicEnabled(!!e.target.checked);

@@ -1,3 +1,8 @@
+/*
+ * File: public/js/sender.js
+ * Role: Phone-side controller logic for sensors, gestures, telemetry, and game/death actions.
+ * Notes: Manages permissions, command arming, peer messaging, and save/discard score behavior.
+ */
 const $statusBar     = document.getElementById("statusBar");
 const $senderWrap    = document.getElementById("senderWrap");
 const $startBtn      = document.getElementById("startSensorsBtn");
@@ -91,7 +96,6 @@ const storeScoreboardName = (name) => {
   try {
     localStorage.setItem(PLAYER_NAME_STORAGE_KEY, normalizePlayerName(name));
   } catch {
-    // Ignore storage failures on mobile browsers.
   }
 };
 
@@ -275,7 +279,7 @@ const createPeer = (initiator, peerId) => {
     hideDeathActions();
   });
 
-  peer.on("stream", () => {/* Sender doesn't render remote stream */});
+  peer.on("stream", () => {});
 
   peer.on("data", (raw) => {
     const msg = JSON.parse(raw);
@@ -513,7 +517,7 @@ const activateSensors = () => {
     sendTelemetrySnapshot();
   }, 120);
 
-  /* ── Gesture detection state ── */
+  
   let lastGestureTime = 0;
   const COOLDOWN = 1500;
 
@@ -527,7 +531,7 @@ const activateSensors = () => {
     }
   };
 
-  /* ── Shake state ── */
+  
   let shakeReversals = 0;
   let shakeWindowStart = 0;
   let shakeLastSign = 0;
@@ -535,21 +539,21 @@ const activateSensors = () => {
   const SHAKE_REVERSALS_NEEDED = 4;
   const SHAKE_WINDOW = 1200;
 
-  /* ── Jump / Duck state ── */
+  
   let verticalPhase = "idle";
   let verticalStart = 0;
   const VERTICAL_TIMEOUT = 1500;
-  const VERT_HIGH = 16;  // sharp impact / push-off — well above resting gravity (~9.8)
-  const VERT_LOW  = 6;   // freefall threshold — raised slightly to reduce false triggers
+  const VERT_HIGH = 16;  
+  const VERT_LOW  = 6;   
 
-  /* ── Spin state ── */
+  
   let spinAccum = 0;
   let lastAlpha = null;
   let spinStart = 0;
   const SPIN_WINDOW = 3000;
   const SPIN_THRESHOLD = 350;
 
-  /* ── Move left / right state ── */
+  
   const MOVE_TRIGGER = 2;
   const MOVE_RELEASE = 0.8;
   const MOVE_HOLD_MS = 0;
@@ -558,7 +562,7 @@ const activateSensors = () => {
   let leftReady = true;
   let rightReady = true;
 
-  /* ── Device Motion ── */
+  
   window.addEventListener("devicemotion", (event) => {
     if (!sensorsActive) return;
 
@@ -583,7 +587,7 @@ const activateSensors = () => {
       return;
     }
 
-    /* ── Shake detection ── */
+    
     const linAccel = event.acceleration;
     if (linAccel && activeCommandGestures.includes("shake")) {
       const val = Math.abs(linAccel.x || 0) > Math.abs(linAccel.y || 0)
@@ -608,7 +612,7 @@ const activateSensors = () => {
       }
     }
 
-    /* ── Jump / Duck (unified magnitude detector) ── */
+    
     const aig = event.accelerationIncludingGravity;
     if (aig && (activeCommandGestures.includes("jump") || activeCommandGestures.includes("duck"))) {
       const mag = Math.sqrt(
@@ -616,7 +620,6 @@ const activateSensors = () => {
       );
       const now = Date.now();
 
-      // Timeout → reset
       if (verticalPhase !== "idle" && now - verticalStart > VERTICAL_TIMEOUT) {
         verticalPhase = "idle";
       }
@@ -627,7 +630,6 @@ const activateSensors = () => {
             verticalPhase = "jump-push";
             verticalStart = now;
           } else if (activeCommandGestures.includes("duck") && mag > VERT_HIGH) {
-            // Duck = sudden crouch impact spike — single phase, fires immediately
             verticalPhase = "idle";
             sendGesture("duck");
           }
@@ -644,7 +646,7 @@ const activateSensors = () => {
       }
     }
 
-    /* ── Move left / right via linear acceleration ── */
+    
     if (activeCommandGestures.includes("left") || activeCommandGestures.includes("right")) {
       const now = Date.now();
       const lin = event.acceleration;
@@ -681,9 +683,9 @@ const activateSensors = () => {
         }
       }
     }
-  }); // end devicemotion
+  }); 
 
-  /* ── Device Orientation (spin) ── */
+  
   window.addEventListener("deviceorientation", (event) => {
     if (!sensorsActive || !(peer && peer.connected)) return;
 
@@ -708,7 +710,7 @@ const activateSensors = () => {
       return;
     }
 
-    /* ── 360 Spin (directional accumulation) ── */
+    
     const alpha = event.alpha ?? 0;
     if (lastAlpha !== null) {
       let delta = alpha - lastAlpha;
@@ -727,9 +729,9 @@ const activateSensors = () => {
       }
     }
     lastAlpha = alpha;
-  }); // end deviceorientation
+  }); 
 
-  /* ── Speech detection (RMS of waveform) ── */
+  
   if (myStream) {
     (async () => {
       try {
@@ -770,6 +772,6 @@ const activateSensors = () => {
       }
     })();
   }
-}; // end activateSensors
+}; 
 
 init();

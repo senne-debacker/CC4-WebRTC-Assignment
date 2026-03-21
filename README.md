@@ -748,21 +748,6 @@ const performed = (COMMANDS.find(c => c.gesture === gesture) || { text: gesture 
 showFeedback(`You did ${performed}, that's wrong!`, "wrong");
 ```
 
-#### X. Template
-| Section | Details |
-| :--- | :--- |
-| **Description** | Description of the changes made. |
-| **AI Usage** | **Minimal** |
-
-##### Guestion 01
-**Input**
-AI prompt
-
-**Return**
-AI answer
-
----
-
 ### Day: 17-03-2026
 
 #### 1. Move all controls to the phone
@@ -1192,3 +1177,52 @@ const TILT_TRIGGER = 20;
 const TILT_RELEASE = 8;
 const TILT_HOLD_MS = 150;
 ```
+
+#### 12. Dead code cleanup + unified comments + README finalization
+| Section | Details |
+| :--- | :--- |
+| **Description** | Cleaned dead code paths and stale files, standardized comments into one file-header style across active files, and finalized README reflection content without changing core gameplay logic. |
+| **AI Usage** | **Copilot** |
+
+##### Question 01
+**Input**
+Okay, i think we're as good as done! Dead code cleanup, README completion, and unified comments.
+
+**Return**
+Completed a final maintenance pass focused on project hygiene: removed obsolete receiver artifacts, removed unused signaling emit paths, standardized the comment approach, and validated edited files for syntax/diagnostics.
+
+**Code Snippet** — Receiver dead path removal (maintainability cleanup)
+```js
+// Removed unused stream preview hooks tied to removed DOM nodes
+peer.on("close", () => {
+  peer.destroy();
+  peer = null;
+  if (gameActive) stopGame();
+  setControllerActive(false);
+  setConnectionState("disconnected");
+});
+```
+
+## Human vs AI Overview (Final)
+
+Below is the final ownership overview. If ownership was unclear, it is treated as human-authored.
+
+### Mostly Human-Written
+- Core project concept and game direction (Simon Says flow and command rules)
+- WebRTC + WebSocket architecture choices and integration strategy
+- Tutorial-driven setup and adaptation to this project
+- Final gameplay behavior decisions and tuning acceptance/rejection
+- Bug triage decisions and manual validation process
+
+### AI-Assisted (Copilot / consult)
+- UI and styling polish passes for sender/receiver views
+- Boilerplate-heavy edits and refactor speedups
+- Some event-handler scaffolding and cleanup transformations
+- Drafting and restructuring parts of README diary text
+
+### AI-Generated Segments (then reviewed/edited)
+- Some gesture detection and command-loop scaffolding in earlier iterations
+- Some utility snippets used during rapid iteration
+
+### Final Reflection
+AI mainly helped with styling, repetitive refactors, and speeding up implementation. The networking model and core game structure were primarily human-led, using tutorials plus manual adaptation. When uncertain about ownership, this README assumes human authorship.

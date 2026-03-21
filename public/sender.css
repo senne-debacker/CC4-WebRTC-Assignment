@@ -1,3 +1,8 @@
+/*
+ * File: public/sender.css
+ * Role: Visual styling for mobile controller screens, gameplay controls, and death-screen actions.
+ * Notes: Includes responsive layout, controller-state classes, and button state visuals.
+ */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800;900&display=swap');
 
 :root {
@@ -20,7 +25,7 @@
   --font-body:    'Syne', sans-serif;
 }
 
-/* ── Base ── */
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -28,12 +33,12 @@ body {
   font-family: var(--font-body);
   color: var(--text);
   min-height: 100dvh;
-  /* safe area for notched phones */
+  
   padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0)
            env(safe-area-inset-bottom, 16px) env(safe-area-inset-left, 0);
 }
 
-/* Scanline overlay */
+
 body::before {
   content: '';
   pointer-events: none;
@@ -49,9 +54,7 @@ body::before {
   z-index: 0;
 }
 
-/* ══════════════════════════════════════
-   Layout wrapper
-   ══════════════════════════════════════ */
+
 .sender-wrap {
   position: relative;
   z-index: 1;
@@ -73,9 +76,7 @@ body::before {
   display: flex !important;
 }
 
-/* ══════════════════════════════════════
-   Hero — compact, icon-led
-   ══════════════════════════════════════ */
+
 .sender-hero {
   display: flex;
   align-items: center;
@@ -113,7 +114,7 @@ body::before {
   color: var(--muted);
 }
 
-/* Connection dot (top-right of hero) */
+
 .sender-conn-dot {
   width: 10px;
   height: 10px;
@@ -144,9 +145,7 @@ body::before {
   50%       { opacity: 0.25; }
 }
 
-/* ══════════════════════════════════════
-   Peer info — icon only strip
-   ══════════════════════════════════════ */
+
 .peer-info {
   display: flex;
   align-items: center;
@@ -179,7 +178,7 @@ body::before {
   font-style: normal;
 }
 
-/* Status bar — hidden by default, shown only on warning */
+
 .status {
   font-family: var(--font-mono);
   font-size: 0.66rem;
@@ -191,15 +190,13 @@ body::before {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--muted);
-  display: none; /* hidden unless needed */
+  display: none; 
 }
 
 .status.disconnected { display: block; }
 .status.connected    { display: none; }
 
-/* ══════════════════════════════════════
-   Phone command display
-   ══════════════════════════════════════ */
+
 .phone-command-display {
   background: var(--surface);
   border: 1px solid var(--border-md);
@@ -210,7 +207,7 @@ body::before {
   overflow: hidden;
 }
 
-/* corner accents */
+
 .phone-command-display::before,
 .phone-command-display::after {
   content: '';
@@ -244,9 +241,7 @@ body::before {
   line-height: 1.1;
 }
 
-/* ══════════════════════════════════════
-   Controller toggle button
-   ══════════════════════════════════════ */
+
 .btn-controller {
   width: 100%;
   padding: 18px;
@@ -300,9 +295,7 @@ body::before {
   box-shadow: 0 0 0 1px rgba(127, 140, 141, 0.55), 0 8px 24px rgba(75, 85, 86, 0.45);
 }
 
-/* ══════════════════════════════════════
-   Sensor info strip
-   ══════════════════════════════════════ */
+
 .sensor-info {
   display: none;
   font-family: var(--font-mono);
@@ -324,14 +317,12 @@ body::before {
   background: rgba(46, 204, 113, 0.04);
 }
 
-/* ══════════════════════════════════════
-   TAP button — large, thumb-friendly
-   ══════════════════════════════════════ */
+
 .tap-btn-wrap {
   display: none;
   justify-content: center;
   padding: 12px 0 4px;
-  flex: 1; /* push game buttons to bottom when visible */
+  flex: 1; 
   align-items: center;
 }
 
@@ -383,14 +374,12 @@ body::before {
   display: none !important;
 }
 
-/* ══════════════════════════════════════
-   Game control buttons
-   ══════════════════════════════════════ */
+
 .game-ctrl-wrap {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: auto; /* stick to bottom */
+  margin-top: auto; 
 }
 
 .btn-game {

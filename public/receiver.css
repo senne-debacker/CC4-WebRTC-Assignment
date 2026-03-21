@@ -1,8 +1,11 @@
+/*
+ * File: public/receiver.css
+ * Role: Visual styling for receiver lobby, game screen, death screen, telemetry panel, and leaderboard components.
+ * Notes: Defines typography, layout, animation accents, and state-specific UI classes.
+ */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800;900&display=swap');
 
-/* ══════════════════════════════════════
-   CSS Variables
-   ══════════════════════════════════════ */
+
 :root {
   --gold:       #f1c40f;
   --orange:     #e67e22;
@@ -21,9 +24,7 @@
   --font-body:    'Syne', sans-serif;
 }
 
-/* ══════════════════════════════════════
-   Lobby
-   ══════════════════════════════════════ */
+
 .lobby {
   max-width: 1060px;
   margin: 0 auto;
@@ -32,7 +33,7 @@
   position: relative;
 }
 
-/* Scanline atmosphere overlay */
+
 .lobby::before {
   content: '';
   pointer-events: none;
@@ -48,7 +49,7 @@
   z-index: 0;
 }
 
-/* ── Hero ── */
+
 .lobby-hero {
   text-align: center;
   padding: 52px 16px 36px;
@@ -77,7 +78,7 @@
   margin-bottom: 24px;
 }
 
-/* ── Connection status indicator ── */
+
 .connection-status {
   display: inline-flex;
   align-items: center;
@@ -126,7 +127,7 @@
   50%       { opacity: 0.3; }
 }
 
-/* ── Body grid ── */
+
 .lobby-body {
   display: grid;
   grid-template-columns: 1fr 280px;
@@ -140,7 +141,7 @@
   .lobby-body { grid-template-columns: 1fr; }
 }
 
-/* ── Instructions panel ── */
+
 .lobby-instructions {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -150,7 +151,7 @@
   overflow: hidden;
 }
 
-/* Corner accent marks */
+
 .lobby-instructions::before,
 .lobby-instructions::after {
   content: '';
@@ -242,7 +243,7 @@
   transform: translateX(22px);
 }
 
-/* Default instructions list */
+
 .lobby-instructions ol {
   padding-left: 0;
   list-style: none;
@@ -278,7 +279,7 @@
   font-weight: 700;
 }
 
-/* Connected state instructions */
+
 #instructionsConnected {
   display: flex;
   flex-direction: column;
@@ -298,7 +299,7 @@
   font-weight: 700;
 }
 
-/* Commands sub-section */
+
 .lobby-commands {
   margin-top: 28px;
   padding-top: 24px;
@@ -338,14 +339,14 @@
   color: var(--gold);
 }
 
-/* ── Right column ── */
+
 .lobby-connect {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-/* QR section */
+
 .qr-section {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -376,7 +377,7 @@
   letter-spacing: 0.04em;
 }
 
-/* Telemetry panel */
+
 .telemetry-panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -585,7 +586,7 @@
   text-align: right;
 }
 
-/* Camera preview */
+
 .lobby-preview {
   border-radius: 2px;
   overflow: hidden;
@@ -631,7 +632,7 @@
   opacity: 0.9;
 }
 
-/* Connected banner (replaces QR when paired) */
+
 .connected-banner {
   font-family: var(--font-display);
   font-size: 1.4rem;
@@ -645,7 +646,7 @@
   text-shadow: 0 0 16px rgba(46, 204, 113, 0.4);
 }
 
-/* Peer bar */
+
 .peer-bar {
   display: flex;
   align-items: center;
@@ -676,7 +677,7 @@
   font-size: 0.75rem;
 }
 
-/* ── Start game button ── */
+
 .btn-start-game {
   display: none;
   width: 100%;
@@ -719,12 +720,10 @@
 
 .btn-start-game:active { transform: translateY(0) scale(0.98); }
 
-/* ── Hidden utility ── */
+
 .hidden { display: none !important; }
 
-/* ══════════════════════════════════════
-   Game Screen
-   ══════════════════════════════════════ */
+
 .game-screen {
   display: none;
   position: fixed;
@@ -752,9 +751,7 @@
 
 .game-screen.active { display: flex; }
 
-/* ══════════════════════════════════════
-   Death Screen
-   ══════════════════════════════════════ */
+
 .death-screen {
   display: none;
   position: fixed;
@@ -904,7 +901,7 @@
   color: var(--gold);
 }
 
-/* ── Game header ── */
+
 .game-header {
   position: absolute;
   top: 0; left: 0; right: 0;
@@ -976,7 +973,7 @@
   border-color: rgba(231, 76, 60, 0.5);
 }
 
-/* ── Command display ── */
+
 .command-display {
   text-align: center;
   padding: 0 32px;
@@ -1038,7 +1035,7 @@
   box-shadow: 0 0 24px rgba(46, 204, 113, 0.55);
 }
 
-/* ── Feedback ── */
+
 .feedback-display {
   margin-top: 36px;
   font-family: var(--font-mono);
@@ -1062,7 +1059,7 @@
   text-shadow: 0 0 16px rgba(231, 76, 60, 0.45);
 }
 
-/* ── Camera PiP ── */
+
 .camera-pip {
   position: absolute;
   bottom: 24px;

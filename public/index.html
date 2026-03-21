@@ -1,4 +1,9 @@
 <!doctype html>
+<!--
+  File: public/index.html
+  Role: Receiver UI for lobby, in-game command display, death results, telemetry, and leaderboard views.
+  Notes: Loaded on the laptop/host side and controlled by public/js/receiver.js.
+-->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -9,8 +14,7 @@
   </head>
   <body>
     <div id="lobbyScreen" class="lobby">
-      <!-- Hero -->
-      <div class="lobby-hero">
+            <div class="lobby-hero">
         <h1 class="lobby-title">Welcome to Simon Says</h1>
         <p class="lobby-subtitle">The party game that uses your phone as a controller!</p>
         <div class="connection-status" role="status" aria-live="polite">
@@ -19,10 +23,8 @@
         </div>
       </div>
 
-      <!-- Body -->
-      <div class="lobby-body">
-        <!-- Left: instructions -->
-<div class="lobby-instructions">
+            <div class="lobby-body">
+        <div class="lobby-instructions">
   <h2>How to Play</h2>
 
   <div class="music-toggle-row">
@@ -52,8 +54,7 @@
   </div>
 </div>
 
-        <!-- Right: connection -->
-        <div class="lobby-connect">
+                <div class="lobby-connect">
           <div id="qrSection" class="qr-section">
             <h2>Scan to Join</h2>
             <div id="qrcode"></div>
@@ -129,8 +130,7 @@
       </div>
     </div>
 
-    <!-- ── GAME SCREEN ── -->
-    <div id="gameScreen" class="game-screen">
+        <div id="gameScreen" class="game-screen">
       <div class="game-header">
         <div id="gameScore" class="game-score">Score: 0</div>
         <div id="gameRound" class="game-round"></div>

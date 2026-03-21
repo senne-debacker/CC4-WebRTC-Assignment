@@ -1,3 +1,8 @@
+/*
+ * File: index.js
+ * Role: Express + Socket.IO signaling server for peer discovery and signal forwarding.
+ * Notes: Serves static files, returns local IP for QR flow, and relays WebRTC signaling messages.
+ */
 require('dotenv').config();
 const isDevelopment = (process.env.NODE_ENV === 'development');
 const express = require('express');
@@ -69,5 +74,4 @@ io.on('connection', socket => {
   });
 
   io.emit('clients', clients);
-  io.emit('client-connection', clients[socket.id]);
 });
