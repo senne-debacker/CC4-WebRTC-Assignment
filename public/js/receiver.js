@@ -11,7 +11,7 @@
       const $pipCamera      = document.getElementById("pipCamera");
       const $qrcode         = document.getElementById("qrcode");
       const $urlDisplay     = document.getElementById("urlDisplay");
-      const $lobbyConnect   = document.querySelector(".lobby-connect");
+      const $lobbyConnect   = document.querySelector(".qr-section");
       const $instructionsDefault = document.getElementById("instructionsDefault");
       const $instructionsConnected = document.getElementById("instructionsConnected");
 
