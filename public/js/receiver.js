@@ -12,6 +12,7 @@
       const $gameLives      = document.getElementById("gameLives");
       const $deathFinalScore = document.getElementById("deathFinalScore");
       const $deathScoreboard = document.getElementById("deathScoreboard");
+      const $lobbyScoreboard = document.getElementById("lobbyScoreboard");
       const $pipCamera      = document.getElementById("pipCamera");
       const $qrcode         = document.getElementById("qrcode");
       const $urlDisplay     = document.getElementById("urlDisplay");
@@ -259,6 +260,7 @@
         );
         pendingDeathEntry = null;
         activeDeathToken = null;
+        renderLobbyScoreboard();
         return savedRows;
       };
 
@@ -268,6 +270,7 @@
           pendingDeathEntry = null;
           activeDeathToken = null;
         }
+        renderLobbyScoreboard();
         return getDisplayScoreboard();
       };
 
@@ -309,6 +312,42 @@
         });
       };
 
+      const renderLobbyScoreboard = () => {
+        if (!$lobbyScoreboard) return;
+        const rows = loadScoreboard();
+        $lobbyScoreboard.innerHTML = "";
+
+        if (!rows.length) {
+          const $empty = document.createElement("li");
+          $empty.className = "death-scoreboard-empty";
+          $empty.textContent = "No saved scores yet";
+          $lobbyScoreboard.appendChild($empty);
+          return;
+        }
+
+        rows.forEach((row, idx) => {
+          const $li = document.createElement("li");
+          $li.className = "lobby-score-row";
+
+          const $rank = document.createElement("span");
+          $rank.className = "lobby-score-rank";
+          $rank.textContent = `#${idx + 1}`;
+
+          const $meta = document.createElement("span");
+          $meta.className = "lobby-score-meta";
+          $meta.textContent = `${normalizePlayerName(row.name)} • ${formatScoreTimestamp(row.timestamp)}`;
+
+          const $value = document.createElement("span");
+          $value.className = "lobby-score-value";
+          $value.textContent = String(row.score);
+
+          $li.appendChild($rank);
+          $li.appendChild($meta);
+          $li.appendChild($value);
+          $lobbyScoreboard.appendChild($li);
+        });
+      };
+
       const showLobbyScreen = () => {
         pendingDeathEntry = null;
         activeDeathToken = null;
@@ -318,6 +357,7 @@
         }
         $gameScreen.classList.remove("active");
         $lobbyScreen.classList.remove("hidden");
+        renderLobbyScoreboard();
       };
 
       const showDeathScreen = (finalScore) => {
@@ -362,6 +402,7 @@
       };
 
       const init = () => {
+        renderLobbyScoreboard();
         showLobbyScreen();
         generateQR();
         initSocket();

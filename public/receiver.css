@@ -392,6 +392,65 @@
   margin-bottom: 12px;
 }
 
+.lobby-leaderboard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 16px;
+}
+
+.lobby-leaderboard h2 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.lobby-scoreboard {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.lobby-score-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border-md);
+  border-radius: 2px;
+  background: var(--surface-2);
+  padding: 7px 9px;
+}
+
+.lobby-score-rank {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+}
+
+.lobby-score-meta {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lobby-score-value {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  line-height: 1;
+  color: #fff;
+}
+
 .telemetry-grid {
   display: grid;
   grid-template-columns: 1fr;
