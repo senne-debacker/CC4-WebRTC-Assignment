@@ -3,7 +3,7 @@
       const $peerInfo      = document.getElementById("peerInfo");
       const $sensorInfo    = document.getElementById("sensorInfo");
       const $tapBtnWrap    = document.getElementById("tapBtnWrap");
-      const $tapBtn        = document.getElementById("tapBtn");
+      const $tapBtns       = document.querySelectorAll(".tap-btn-color");
       const $startGameBtn  = document.getElementById("startGameBtn");
       const $stopGameBtn   = document.getElementById("stopGameBtn");
       const $phoneCommandDisplay = document.getElementById("phoneCommandDisplay");
@@ -20,6 +20,7 @@
       let latestMicLevel = 0;
       let tapCount = 0;
       let tapPulseUntil = 0;
+      let lastTapColor = null;
       let latestGyro = { alpha: 0, beta: 0, gamma: 0 };
       let latestAccel = { x: 0, y: 0, z: 0 };
       const COMMAND_ARM_DELAY = 350;
@@ -41,6 +42,7 @@
           tap: {
             count: tapCount,
             active: Date.now() < tapPulseUntil,
+            color: lastTapColor,
           },
           gyro: latestGyro,
           accel: latestAccel,
@@ -52,6 +54,14 @@
         const speechGateActive = activeCommandGesture === "speech" && Date.now() >= commandArmAt;
         speechEnabled = lobbyMicActive || speechGateActive;
         if (myStream) myStream.getAudioTracks().forEach(t => { t.enabled = speechEnabled; });
+      };
+
+      const updatePhoneUiByGameState = () => {
+        const hideLobbyControls = gameStarted;
+        if ($startBtn) $startBtn.classList.toggle("hide-during-game", hideLobbyControls);
+        if ($statusBar) $statusBar.classList.toggle("hide-during-game", hideLobbyControls);
+        if ($peerInfo) $peerInfo.classList.toggle("hide-during-game", hideLobbyControls);
+        if ($sensorInfo) $sensorInfo.classList.toggle("hide-during-game", hideLobbyControls);
       };
 
       const init = async () => {
@@ -85,6 +95,7 @@
           commandArmAt = 0;
           gameStarted = false;
           speechEnabled = false;
+          updatePhoneUiByGameState();
           if (telemetryTimer) {
             clearInterval(telemetryTimer);
             telemetryTimer = null;
@@ -118,6 +129,7 @@
             commandArmAt = 0;
             gameStarted = false;
             speechEnabled = false;
+            updatePhoneUiByGameState();
             if (telemetryTimer) {
               clearInterval(telemetryTimer);
               telemetryTimer = null;
@@ -167,6 +179,10 @@
 
             // Emoji map for nicer phone UI
             const EMOJI = {
+              "tap-green": '🟢',
+              "tap-red": '🔴',
+              "tap-yellow": '🟡',
+              "tap-blue": '🔵',
               tap: '🤳', jump: '🦘', duck: '🦆', left: '⬅️', right: '➡️', spin: '🌀', shake: '📱', speech: '🗣️'
             };
 
@@ -199,6 +215,7 @@
             commandArmAt = 0;
             gameStarted = false;
             speechEnabled = false;
+            updatePhoneUiByGameState();
             if (telemetryTimer) {
               clearInterval(telemetryTimer);
               telemetryTimer = null;
@@ -224,6 +241,7 @@
         if (sensorsActive) {
           sensorsActive = false;
           gameStarted = false;
+          updatePhoneUiByGameState();
           sendControllerState(false);
           if (telemetryTimer) {
             clearInterval(telemetryTimer);
@@ -239,18 +257,23 @@
         await requestSensorPermission();
       });
 
-      $tapBtn.addEventListener("click", () => {
-        if (peer && peer.connected) {
-          tapCount += 1;
-          tapPulseUntil = Date.now() + 300;
-          peer.send(JSON.stringify({ type: "button" }));
-          sendTelemetrySnapshot();
-        }
+      $tapBtns.forEach(($btn) => {
+        $btn.addEventListener("click", () => {
+          if (peer && peer.connected) {
+            tapCount += 1;
+            tapPulseUntil = Date.now() + 300;
+            const color = $btn.dataset.color || "unknown";
+            lastTapColor = color;
+            peer.send(JSON.stringify({ type: "button", color }));
+            sendTelemetrySnapshot();
+          }
+        });
       });
 
       $startGameBtn.addEventListener("click", () => {
         if (peer && peer.connected) {
           gameStarted = true;
+          updatePhoneUiByGameState();
           activeCommandGesture = null;
           commandArmAt = 0;
           syncMicTrackEnabled();
@@ -263,6 +286,7 @@
       $stopGameBtn.addEventListener("click", () => {
         if (peer && peer.connected) {
           gameStarted = false;
+          updatePhoneUiByGameState();
           activeCommandGesture = null;
           commandArmAt = 0;
           syncMicTrackEnabled();
@@ -298,6 +322,7 @@
       const activateSensors = () => {
         sensorsActive = true;
         gameStarted = false;
+        updatePhoneUiByGameState();
         sendControllerState(true);
         syncMicTrackEnabled();
         $startBtn.textContent = "Stop Controller Mode";

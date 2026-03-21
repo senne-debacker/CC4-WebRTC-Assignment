@@ -40,7 +40,10 @@
 
       /* ── Game State ── */
       const COMMANDS = [
-        { text: "Touch the screen!", gesture: "tap" },
+        { text: "Press the green button!", gesture: "tap-green" },
+        { text: "Press the red button!", gesture: "tap-red" },
+        { text: "Press the yellow button!", gesture: "tap-yellow" },
+        { text: "Press the blue button!", gesture: "tap-blue" },
         { text: "Jump!", gesture: "jump" },
         { text: "Duck!", gesture: "duck" },
         { text: "Move left!", gesture: "left" },
@@ -146,7 +149,10 @@
         const tap = payload.tap || {};
         if ($telemetryTapDot) $telemetryTapDot.classList.toggle("active", !!tap.active);
         if ($telemetryTapStatus) $telemetryTapStatus.textContent = tap.active ? "Tap!" : "Idle";
-        if ($telemetryTapCount) $telemetryTapCount.textContent = `Count: ${Number(tap.count) || 0}`;
+        const lastColor = tap.color ? String(tap.color).toUpperCase() : "-";
+        if ($telemetryTapCount) {
+          $telemetryTapCount.textContent = `Count: ${Number(tap.count) || 0} • Last: ${lastColor}`;
+        }
 
         const gyro = payload.gyro || {};
         const alpha = Number(gyro.alpha) || 0;
@@ -284,7 +290,7 @@
       /* ── Message handling ── */
       const handlePeerMessage = (msg) => {
         if (msg.type === "button") {
-          if (gameActive) handleGameAction("tap");
+          if (gameActive) handleGameAction(`tap-${msg.color || "unknown"}`);
         } else if (msg.type === "gesture") {
           if (gameActive) handleGameAction(msg.gesture);
         } else if (msg.type === "controller-state") {
@@ -333,7 +339,12 @@
 
         // Tell the phone which gesture is expected so it can gate speech detection
         if (peer && peer.connected) {
-          peer.send(JSON.stringify({ type: "command", gesture: cmd.gesture }));
+          peer.send(JSON.stringify({
+            type: "command",
+            gesture: cmd.gesture,
+            text: cmd.text,
+            simon: simonSays,
+          }));
         }
 
         $commandPrefix.textContent = simonSays ? "Simon says…" : "";
@@ -402,7 +413,12 @@
         clearTimeout(roundTimer);
         // Reset the phone's speech gate
         if (peer && peer.connected) {
-          peer.send(JSON.stringify({ type: "command", gesture: null }));
+          peer.send(JSON.stringify({
+            type: "command",
+            gesture: null,
+            text: null,
+            simon: false,
+          }));
         }
         $lobbyScreen.classList.remove("hidden");
         $gameScreen.classList.remove("active");
