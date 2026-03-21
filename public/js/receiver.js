@@ -467,6 +467,7 @@
             text: null,
             simon: false,
           }));
+          peer.send(JSON.stringify({ type: "game-ended" }));
         }
         setMusicPlaying(false);
         $lobbyScreen.classList.remove("hidden");

@@ -201,6 +201,14 @@
             } else {
               $phoneCommandDisplay.classList.add("hidden");
             }
+          } else if (msg.type === "game-ended") {
+            gameStarted = false;
+            activeCommandGesture = null;
+            commandArmAt = 0;
+            syncMicTrackEnabled();
+            updatePhoneUiByGameState();
+            $stopGameBtn.style.display  = "none";
+            $startGameBtn.style.display = "";
           }
         });
 
