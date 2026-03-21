@@ -65,10 +65,43 @@
       let simonSays = false;
       let actionPerformed = false;
       let commandBag = [];
+      const lobbyMusic = new Audio("/media/simon_says_lobby.mp3");
+      lobbyMusic.loop = true;
+      lobbyMusic.preload = "auto";
       const gameMusic = new Audio("/media/simon_says_ost.mp3");
       gameMusic.loop = true;
       gameMusic.preload = "auto";
       let musicEnabledByUser = false;
+
+      const stopTrack = (track) => {
+        track.pause();
+        track.currentTime = 0;
+      };
+
+      const playTrack = async (track, logPrefix) => {
+        try {
+          await track.play();
+        } catch (e) {
+          console.warn(`${logPrefix} could not autoplay:`, e);
+        }
+      };
+
+      const syncMusicByState = async () => {
+        if (!musicEnabledByUser) {
+          stopTrack(lobbyMusic);
+          stopTrack(gameMusic);
+          return;
+        }
+
+        if (gameActive) {
+          stopTrack(lobbyMusic);
+          await playTrack(gameMusic, "Game music");
+          return;
+        }
+
+        stopTrack(gameMusic);
+        await playTrack(lobbyMusic, "Lobby music");
+      };
 
       const enableMusic = async () => {
         musicEnabledByUser = true;
@@ -77,28 +110,19 @@
           $enableMusicBtn.textContent = "Music enabled";
         }
 
-        // Unlock audio on the first user gesture so startGame can play reliably.
+        // Unlock audio on first user gesture so later autoplay switching works.
         try {
+          await lobbyMusic.play();
+          lobbyMusic.pause();
+          lobbyMusic.currentTime = 0;
           await gameMusic.play();
           gameMusic.pause();
           gameMusic.currentTime = 0;
         } catch (e) {
           console.warn("Music unlock interaction failed:", e);
         }
-      };
 
-      const setMusicPlaying = async (playing) => {
-        if (playing) {
-          if (!musicEnabledByUser) return;
-          try {
-            await gameMusic.play();
-          } catch (e) {
-            console.warn("Game music could not autoplay:", e);
-          }
-          return;
-        }
-        gameMusic.pause();
-        gameMusic.currentTime = 0;
+        await syncMusicByState();
       };
 
       const renderLives = () => {
@@ -366,7 +390,7 @@
         $gameScore.textContent = "Score: 0";
         $gameRound.textContent = "";
         renderLives();
-        setMusicPlaying(true);
+        syncMusicByState();
 
         commandTimer = setTimeout(nextCommand, 2000);
       };
@@ -469,7 +493,7 @@
           }));
           peer.send(JSON.stringify({ type: "game-ended" }));
         }
-        setMusicPlaying(false);
+        syncMusicByState();
         $lobbyScreen.classList.remove("hidden");
         $gameScreen.classList.remove("active");
       };
