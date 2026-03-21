@@ -11,6 +11,8 @@ const $stopGameBtn   = document.getElementById("stopGameBtn");
 const $deathActions  = document.getElementById("deathActions");
 const $deathScoreValue = document.getElementById("deathScoreValue");
 const $deathNameInput = document.getElementById("deathNameInput");
+const $saveScoreBtn = document.getElementById("saveScoreBtn");
+const $saveScoreHint = document.getElementById("saveScoreHint");
 const $returnLobbyBtn = document.getElementById("returnLobbyBtn");
 const $playAgainBtn = document.getElementById("playAgainBtn");
 const $phoneCommandDisplay = document.getElementById("phoneCommandDisplay");
@@ -21,7 +23,7 @@ let socket, myStream, peer;
 let sensorsActive = false;
 let speechEnabled = false;
 let gameStarted = false;
-let activeCommandGesture = null;
+let activeCommandGestures = [];
 let commandArmAt = 0;
 let telemetryTimer = null;
 let latestMicLevel = 0;
@@ -31,6 +33,7 @@ let lastTapColor = null;
 let latestGyro = { alpha: 0, beta: 0, gamma: 0 };
 let latestAccel = { x: 0, y: 0, z: 0 };
 let activeDeathToken = null;
+let deathScoreSaved = false;
 const COMMAND_ARM_DELAY = 350;
 const PLAYER_NAME_STORAGE_KEY = "simonSaysPlayerNameV1";
 
@@ -60,7 +63,7 @@ const sendTelemetrySnapshot = () => {
 
 const syncMicTrackEnabled = () => {
   const lobbyMicActive = sensorsActive && !gameStarted;
-  const speechGateActive = activeCommandGesture === "speech" && Date.now() >= commandArmAt;
+  const speechGateActive = activeCommandGestures.includes("speech") && Date.now() >= commandArmAt;
   speechEnabled = lobbyMicActive || speechGateActive;
   if (myStream) myStream.getAudioTracks().forEach(t => { t.enabled = speechEnabled; });
 };
@@ -104,20 +107,24 @@ const setDeathMode = (active) => {
   if ($senderWrap) $senderWrap.classList.toggle("death-mode", !!active);
 };
 
-const sendScoreNameToReceiver = () => {
-  if (!(peer && peer.connected) || !activeDeathToken) return;
-  const playerName = getScoreboardName();
-  storeScoreboardName(playerName);
-  peer.send(JSON.stringify({
-    type: "score-name",
-    deathToken: activeDeathToken,
-    name: playerName,
-  }));
+const updateSaveButtonState = () => {
+  const hasName = !!String($deathNameInput?.value || "").trim();
+  if ($saveScoreBtn) $saveScoreBtn.disabled = !hasName || deathScoreSaved;
 };
 
 const hideDeathActions = () => {
   if ($deathActions) $deathActions.classList.add("hidden");
   if ($deathScoreValue) $deathScoreValue.textContent = "0";
+  if ($deathNameInput) $deathNameInput.value = "";
+  if ($saveScoreBtn) {
+    $saveScoreBtn.disabled = true;
+    $saveScoreBtn.textContent = "Save Score";
+  }
+  if ($saveScoreHint) {
+    $saveScoreHint.classList.remove("saved");
+    $saveScoreHint.textContent = "Enter a name, then tap Save Score.";
+  }
+  deathScoreSaved = false;
   activeDeathToken = null;
   setDeathMode(false);
 };
@@ -127,34 +134,35 @@ const showDeathActions = (finalScore, deathToken) => {
     $deathScoreValue.textContent = String(Number(finalScore) || 0);
   }
   activeDeathToken = deathToken ? String(deathToken) : null;
+  deathScoreSaved = false;
   if ($deathNameInput) {
     $deathNameInput.value = loadStoredScoreboardName();
   }
+  if ($saveScoreBtn) $saveScoreBtn.textContent = "Save Score";
+  if ($saveScoreHint) {
+    $saveScoreHint.classList.remove("saved");
+    $saveScoreHint.textContent = "Enter a name, then tap Save Score.";
+  }
+  updateSaveButtonState();
   if ($deathActions) $deathActions.classList.remove("hidden");
   setDeathMode(true);
-  sendScoreNameToReceiver();
 };
 
 const beginGameFromPhone = () => {
   if (!(peer && peer.connected)) return;
-  const playerName = getScoreboardName();
-  storeScoreboardName(playerName);
-  if (activeDeathToken) {
-    peer.send(JSON.stringify({
-      type: "score-name",
-      deathToken: activeDeathToken,
-      name: playerName,
-    }));
+  if (activeDeathToken && !deathScoreSaved) {
+    peer.send(JSON.stringify({ type: "discard-score", deathToken: activeDeathToken }));
   }
   gameStarted = true;
   updatePhoneUiByGameState();
   setDeathMode(false);
   if ($deathActions) $deathActions.classList.add("hidden");
-  activeCommandGesture = null;
+  activeCommandGestures = [];
   commandArmAt = 0;
   syncMicTrackEnabled();
-  peer.send(JSON.stringify({ type: "start-game", playerName, deathToken: activeDeathToken }));
+  peer.send(JSON.stringify({ type: "start-game" }));
   activeDeathToken = null;
+  deathScoreSaved = false;
   $startGameBtn.style.display = "none";
   $stopGameBtn.style.display = "";
 };
@@ -186,7 +194,7 @@ const initSocket = () => {
     $statusBar.textContent = "Disconnected from server";
     $statusBar.className = "status disconnected";
     setPeerInfo(null);
-    activeCommandGesture = null;
+    activeCommandGestures = [];
     commandArmAt = 0;
     gameStarted = false;
     speechEnabled = false;
@@ -221,7 +229,7 @@ const initSocket = () => {
       $startGameBtn.disabled = true;
       $startGameBtn.style.display = "";
       $stopGameBtn.style.display  = "none";
-      activeCommandGesture = null;
+      activeCommandGestures = [];
       commandArmAt = 0;
       gameStarted = false;
       speechEnabled = false;
@@ -272,7 +280,10 @@ const createPeer = (initiator, peerId) => {
   peer.on("data", (raw) => {
     const msg = JSON.parse(raw);
     if (msg.type === "command") {
-      activeCommandGesture = msg.gesture || null;
+      const nextGestures = Array.isArray(msg.gestures) && msg.gestures.length
+        ? msg.gestures
+        : (msg.gesture ? [msg.gesture] : []);
+      activeCommandGestures = nextGestures.map((g) => String(g));
       commandArmAt = Date.now() + COMMAND_ARM_DELAY;
       syncMicTrackEnabled();
 
@@ -285,7 +296,7 @@ const createPeer = (initiator, peerId) => {
       }
     } else if (msg.type === "game-ended") {
       gameStarted = false;
-      activeCommandGesture = null;
+      activeCommandGestures = [];
       commandArmAt = 0;
       syncMicTrackEnabled();
       updatePhoneUiByGameState();
@@ -294,7 +305,7 @@ const createPeer = (initiator, peerId) => {
       $startGameBtn.style.display = "";
     } else if (msg.type === "game-over") {
       gameStarted = false;
-      activeCommandGesture = null;
+      activeCommandGestures = [];
       commandArmAt = 0;
       syncMicTrackEnabled();
       updatePhoneUiByGameState();
@@ -317,7 +328,7 @@ const createPeer = (initiator, peerId) => {
     $startGameBtn.style.display = "";
     $stopGameBtn.style.display  = "none";
     sensorsActive = false;
-    activeCommandGesture = null;
+    activeCommandGestures = [];
     commandArmAt = 0;
     gameStarted = false;
     speechEnabled = false;
@@ -392,7 +403,7 @@ $stopGameBtn.addEventListener("click", () => {
   if (peer && peer.connected) {
     gameStarted = false;
     updatePhoneUiByGameState();
-    activeCommandGesture = null;
+    activeCommandGestures = [];
     commandArmAt = 0;
     syncMicTrackEnabled();
     hideDeathActions();
@@ -406,22 +417,16 @@ if ($returnLobbyBtn) {
   $returnLobbyBtn.addEventListener("click", () => {
     if (!(peer && peer.connected)) return;
     const deathToken = activeDeathToken;
-    const playerName = getScoreboardName();
-    storeScoreboardName(playerName);
-    if (deathToken) {
-      peer.send(JSON.stringify({
-        type: "score-name",
-        deathToken,
-        name: playerName,
-      }));
+    if (deathToken && !deathScoreSaved) {
+      peer.send(JSON.stringify({ type: "discard-score", deathToken }));
     }
     gameStarted = false;
     updatePhoneUiByGameState();
-    activeCommandGesture = null;
+    activeCommandGestures = [];
     commandArmAt = 0;
     syncMicTrackEnabled();
     hideDeathActions();
-    peer.send(JSON.stringify({ type: "return-lobby", playerName, deathToken }));
+    peer.send(JSON.stringify({ type: "return-lobby", deathToken }));
     $stopGameBtn.style.display  = "none";
     $startGameBtn.style.display = "";
   });
@@ -435,7 +440,34 @@ if ($playAgainBtn) {
 
 if ($deathNameInput) {
   $deathNameInput.addEventListener("input", () => {
-    sendScoreNameToReceiver();
+    updateSaveButtonState();
+  });
+}
+
+if ($saveScoreBtn) {
+  $saveScoreBtn.addEventListener("click", () => {
+    if (!(peer && peer.connected) || !activeDeathToken) return;
+    const playerName = String($deathNameInput?.value || "").trim();
+    if (!playerName) {
+      updateSaveButtonState();
+      return;
+    }
+    const normalized = normalizePlayerName(playerName);
+    storeScoreboardName(normalized);
+    peer.send(JSON.stringify({
+      type: "save-score",
+      deathToken: activeDeathToken,
+      name: normalized,
+    }));
+    deathScoreSaved = true;
+    if ($saveScoreBtn) {
+      $saveScoreBtn.disabled = true;
+      $saveScoreBtn.textContent = "Saved";
+    }
+    if ($saveScoreHint) {
+      $saveScoreHint.classList.add("saved");
+      $saveScoreHint.textContent = "Score saved to leaderboard.";
+    }
   });
 }
 
@@ -487,7 +519,7 @@ const activateSensors = () => {
 
   const sendGesture = (gesture) => {
     const now = Date.now();
-    if (gesture !== activeCommandGesture || now < commandArmAt) return;
+    if (!activeCommandGestures.includes(gesture) || now < commandArmAt) return;
     if (now - lastGestureTime < COOLDOWN) return;
     lastGestureTime = now;
     if (peer && peer.connected) {
@@ -539,7 +571,7 @@ const activateSensors = () => {
       };
     }
 
-    const commandArmed = !!activeCommandGesture && Date.now() >= commandArmAt;
+    const commandArmed = activeCommandGestures.length > 0 && Date.now() >= commandArmAt;
     if (!commandArmed) {
       shakeReversals = 0;
       shakeLastSign = 0;
@@ -553,7 +585,7 @@ const activateSensors = () => {
 
     /* ── Shake detection ── */
     const linAccel = event.acceleration;
-    if (linAccel && activeCommandGesture === "shake") {
+    if (linAccel && activeCommandGestures.includes("shake")) {
       const val = Math.abs(linAccel.x || 0) > Math.abs(linAccel.y || 0)
         ? (linAccel.x || 0) : (linAccel.y || 0);
       const sign = val > SHAKE_THRESH ? 1 : val < -SHAKE_THRESH ? -1 : 0;
@@ -578,7 +610,7 @@ const activateSensors = () => {
 
     /* ── Jump / Duck (unified magnitude detector) ── */
     const aig = event.accelerationIncludingGravity;
-    if (aig && (activeCommandGesture === "jump" || activeCommandGesture === "duck")) {
+    if (aig && (activeCommandGestures.includes("jump") || activeCommandGestures.includes("duck"))) {
       const mag = Math.sqrt(
         (aig.x || 0) ** 2 + (aig.y || 0) ** 2 + (aig.z || 0) ** 2
       );
@@ -591,10 +623,10 @@ const activateSensors = () => {
 
       switch (verticalPhase) {
         case "idle":
-          if (activeCommandGesture === "jump" && mag > VERT_HIGH) {
+          if (activeCommandGestures.includes("jump") && mag > VERT_HIGH) {
             verticalPhase = "jump-push";
             verticalStart = now;
-          } else if (activeCommandGesture === "duck" && mag > VERT_HIGH) {
+          } else if (activeCommandGestures.includes("duck") && mag > VERT_HIGH) {
             // Duck = sudden crouch impact spike — single phase, fires immediately
             verticalPhase = "idle";
             sendGesture("duck");
@@ -613,7 +645,7 @@ const activateSensors = () => {
     }
 
     /* ── Move left / right via linear acceleration ── */
-    if (activeCommandGesture === "left" || activeCommandGesture === "right") {
+    if (activeCommandGestures.includes("left") || activeCommandGestures.includes("right")) {
       const now = Date.now();
       const lin = event.acceleration;
       const grav = event.accelerationIncludingGravity;
@@ -623,7 +655,7 @@ const activateSensors = () => {
           : (grav && grav.x != null ? grav.x : 0)
       );
 
-      if (activeCommandGesture === "left") {
+      if (activeCommandGestures.includes("left")) {
         if (ax >= MOVE_TRIGGER) {
           if (!leftHoldStart) leftHoldStart = now;
           if (leftReady && now - leftHoldStart >= MOVE_HOLD_MS) {
@@ -636,7 +668,7 @@ const activateSensors = () => {
         }
       }
 
-      if (activeCommandGesture === "right") {
+      if (activeCommandGestures.includes("right")) {
         if (ax <= -MOVE_TRIGGER) {
           if (!rightHoldStart) rightHoldStart = now;
           if (rightReady && now - rightHoldStart >= MOVE_HOLD_MS) {
@@ -661,7 +693,7 @@ const activateSensors = () => {
       gamma: Number(event.gamma || 0),
     };
 
-    const commandArmed = !!activeCommandGesture && Date.now() >= commandArmAt;
+    const commandArmed = activeCommandGestures.length > 0 && Date.now() >= commandArmAt;
     if (!commandArmed) {
       spinAccum = 0;
       spinStart = Date.now();
@@ -669,7 +701,7 @@ const activateSensors = () => {
       return;
     }
 
-    if (activeCommandGesture !== "spin") {
+    if (!activeCommandGestures.includes("spin")) {
       spinAccum = 0;
       spinStart = Date.now();
       lastAlpha = null;

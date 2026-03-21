@@ -58,6 +58,11 @@
         { text: "Shake your phone!", gesture: "shake" },
         { text: "Say something!", gesture: "speech" },
       ];
+      const COLOR_COMMANDS = COMMANDS.filter((c) => c.gesture.startsWith("tap-"));
+      const MOVEMENT_COMMANDS = COMMANDS.filter((c) => [
+        "jump", "duck", "left", "right", "spin", "shake"
+      ].includes(c.gesture));
+      const HARD_MODE_SCORE = 15;
 
       let gameActive = false;
       let commandTimer = null;
@@ -67,7 +72,8 @@
       let round = 0;
       let currentCommand = null;
       let simonSays = false;
-      let actionPerformed = false;
+      let roundResolved = false;
+      let performedGestures = new Set();
       let commandBag = [];
       const lobbyMusic = new Audio("/media/simon_says_lobby.mp3");
       lobbyMusic.loop = true;
@@ -156,6 +162,7 @@
       const SCOREBOARD_STORAGE_KEY = "simonSaysScoreboardV1";
       const SCOREBOARD_LIMIT = 8;
       let activeDeathToken = null;
+      let pendingDeathEntry = null;
 
       const refillCommandBag = () => {
         // Fisher-Yates shuffle so every command appears once before repeats.
@@ -195,6 +202,7 @@
               name: normalizePlayerName(entry.name),
               token: String(entry.token || ""),
             }))
+            .filter((entry) => !!entry.name)
             .slice(0, SCOREBOARD_LIMIT);
         } catch {
           return [];
@@ -209,11 +217,11 @@
         }
       };
 
-      const recordScore = (finalScore, playerName = "Player", deathToken = `${Date.now()}-${Math.random()}`) => {
+      const recordScore = (finalScore, playerName = "Player", deathToken = `${Date.now()}-${Math.random()}`, timestamp = Date.now()) => {
         const rows = loadScoreboard();
         rows.push({
           score: Number(finalScore) || 0,
-          timestamp: Date.now(),
+          timestamp: Number(timestamp) || Date.now(),
           name: normalizePlayerName(playerName),
           token: String(deathToken),
         });
@@ -226,15 +234,41 @@
         return trimmed;
       };
 
-      const updateRecordedScoreName = (deathToken, name) => {
-        const token = String(deathToken || "");
-        if (!token) return loadScoreboard();
+      const getDisplayScoreboard = () => {
         const rows = loadScoreboard();
-        const target = rows.find((row) => String(row.token || "") === token);
-        if (!target) return rows;
-        target.name = normalizePlayerName(name);
-        saveScoreboard(rows);
-        return rows;
+        if (!pendingDeathEntry) return rows;
+        const merged = [...rows, pendingDeathEntry];
+        merged.sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score;
+          return a.timestamp - b.timestamp;
+        });
+        return merged.slice(0, SCOREBOARD_LIMIT);
+      };
+
+      const savePendingScore = (deathToken, name) => {
+        const token = String(deathToken || "");
+        const trimmedName = String(name || "").trim();
+        if (!pendingDeathEntry || pendingDeathEntry.token !== token || !trimmedName) {
+          return getDisplayScoreboard();
+        }
+        const savedRows = recordScore(
+          pendingDeathEntry.score,
+          normalizePlayerName(trimmedName),
+          token,
+          pendingDeathEntry.timestamp
+        );
+        pendingDeathEntry = null;
+        activeDeathToken = null;
+        return savedRows;
+      };
+
+      const discardPendingScore = (deathToken) => {
+        const token = String(deathToken || "");
+        if (pendingDeathEntry && pendingDeathEntry.token === token) {
+          pendingDeathEntry = null;
+          activeDeathToken = null;
+        }
+        return getDisplayScoreboard();
       };
 
       const renderScoreboard = (rows) => {
@@ -259,7 +293,10 @@
 
           const $meta = document.createElement("span");
           $meta.className = "death-score-meta";
-          $meta.textContent = `${normalizePlayerName(row.name)} • ${formatScoreTimestamp(row.timestamp)}`;
+          const label = row.pending
+            ? "UNSAVED"
+            : normalizePlayerName(row.name);
+          $meta.textContent = `${label} • ${formatScoreTimestamp(row.timestamp)}`;
 
           const $value = document.createElement("span");
           $value.className = "death-score-value";
@@ -273,6 +310,7 @@
       };
 
       const showLobbyScreen = () => {
+        pendingDeathEntry = null;
         activeDeathToken = null;
         if ($deathScreen) {
           $deathScreen.classList.remove("active");
@@ -285,7 +323,14 @@
       const showDeathScreen = (finalScore) => {
         const safeScore = Number(finalScore) || 0;
         activeDeathToken = `${Date.now()}-${Math.random()}`;
-        const scores = recordScore(safeScore, "Player", activeDeathToken);
+        pendingDeathEntry = {
+          score: safeScore,
+          timestamp: Date.now(),
+          name: "",
+          token: activeDeathToken,
+          pending: true,
+        };
+        const scores = getDisplayScoreboard();
         if ($deathFinalScore) $deathFinalScore.textContent = String(safeScore);
         renderScoreboard(scores);
         $gameScreen.classList.remove("active");
@@ -518,18 +563,12 @@
           setControllerActive(true);
           updateTelemetry(msg);
         } else if (msg.type === "start-game") {
-          if (msg.deathToken && msg.playerName) {
-            const rows = updateRecordedScoreName(msg.deathToken, msg.playerName);
-            if ($deathScreen && $deathScreen.classList.contains("active")) {
-              renderScoreboard(rows);
-            }
-          }
           if (!gameActive) startGame();
         } else if (msg.type === "stop-game") {
           if (gameActive) stopGame();
         } else if (msg.type === "return-lobby") {
-          if (msg.deathToken && msg.playerName) {
-            const rows = updateRecordedScoreName(msg.deathToken, msg.playerName);
+          if (msg.deathToken) {
+            const rows = discardPendingScore(msg.deathToken);
             if ($deathScreen && $deathScreen.classList.contains("active")) {
               renderScoreboard(rows);
             }
@@ -542,8 +581,13 @@
               peer.send(JSON.stringify({ type: "game-ended" }));
             }
           }
-        } else if (msg.type === "score-name") {
-          const rows = updateRecordedScoreName(msg.deathToken, msg.name);
+        } else if (msg.type === "save-score") {
+          const rows = savePendingScore(msg.deathToken, msg.name);
+          if ($deathScreen && $deathScreen.classList.contains("active")) {
+            renderScoreboard(rows);
+          }
+        } else if (msg.type === "discard-score") {
+          const rows = discardPendingScore(msg.deathToken);
           if ($deathScreen && $deathScreen.classList.contains("active")) {
             renderScoreboard(rows);
           }
@@ -577,7 +621,8 @@
 
       const nextCommand = () => {
         round++;
-        actionPerformed = false;
+        roundResolved = false;
+        performedGestures.clear();
 
         const speedStep = Math.floor((round - 1) / SPEED_STEP_ROUNDS);
         const actionMs = Math.max(MIN_ACTION_MS, BASE_ACTION_MS - (speedStep * ACTION_REDUCTION_PER_STEP));
@@ -586,14 +631,28 @@
         if (commandBag.length === 0) refillCommandBag();
         const cmd = commandBag.pop();
         simonSays = Math.random() >= 0.5;
-        currentCommand = cmd;
+        const hardMode = score >= HARD_MODE_SCORE;
+        if (hardMode) {
+          const colorCmd = COLOR_COMMANDS[Math.floor(Math.random() * COLOR_COMMANDS.length)];
+          const movementCmd = MOVEMENT_COMMANDS[Math.floor(Math.random() * MOVEMENT_COMMANDS.length)];
+          currentCommand = {
+            text: `${colorCmd.text} + ${movementCmd.text}`,
+            gestures: [colorCmd.gesture, movementCmd.gesture],
+          };
+        } else {
+          currentCommand = {
+            text: cmd.text,
+            gestures: [cmd.gesture],
+          };
+        }
 
         // Tell the phone which gesture is expected so it can gate speech detection
         if (peer && peer.connected) {
           peer.send(JSON.stringify({
             type: "command",
-            gesture: cmd.gesture,
-            text: cmd.text,
+            gesture: currentCommand.gestures[0],
+            gestures: currentCommand.gestures,
+            text: currentCommand.text,
             simon: simonSays,
           }));
         }
@@ -601,7 +660,7 @@
         $commandPrefix.textContent = simonSays ? "Simon says…" : "";
         $commandPrefix.className = simonSays
           ? "command-prefix simon" : "command-prefix";
-        $commandAction.textContent = cmd.text;
+        $commandAction.textContent = currentCommand.text;
         $gameRound.textContent = `Round ${round} • Speed ${speedStep + 1}`;
         $gameScore.textContent = `Score: ${score}`;
         $feedbackDisplay.textContent = "";
@@ -609,9 +668,9 @@
 
         roundTimer = setTimeout(() => {
           if (!gameActive) return;
-          if (simonSays && !actionPerformed) {
+          if (simonSays && !roundResolved) {
             loseLife("Too slow! 😴");
-          } else if (!simonSays && !actionPerformed) {
+          } else if (!simonSays && !roundResolved) {
             score++;
             showFeedback("Correct! You resisted! +1 ✓", "correct");
           }
@@ -634,22 +693,37 @@
       };
 
       const handleGameAction = (gesture) => {
-        if (!gameActive || !currentCommand || actionPerformed) return;
-        actionPerformed = true;
+        if (!gameActive || !currentCommand || roundResolved) return;
+        const requiredGestures = Array.isArray(currentCommand.gestures)
+          ? currentCommand.gestures
+          : [currentCommand.gesture];
 
         // resolve human-friendly label for the performed gesture
         const performed = (COMMANDS.find(c => c.gesture === gesture) || { text: gesture }).text;
 
-        if (gesture === currentCommand.gesture) {
-          if (simonSays) {
-            score++;
-            showFeedback("Correct! +1 ✓", "correct");
-          } else {
-            score = Math.max(0, score - 1);
-            loseLife("Simon didn't say! ✗");
-          }
-        } else {
+        if (!requiredGestures.includes(gesture)) {
+          roundResolved = true;
           loseLife(`You did ${performed}, that's wrong!`);
+          $gameScore.textContent = `Score: ${score}`;
+          return;
+        }
+
+        if (performedGestures.has(gesture)) return;
+
+        if (!simonSays) {
+          roundResolved = true;
+          score = Math.max(0, score - 1);
+          loseLife("Simon didn't say! ✗");
+        } else {
+          performedGestures.add(gesture);
+          const remaining = requiredGestures.filter((g) => !performedGestures.has(g));
+          if (remaining.length === 0) {
+            roundResolved = true;
+            score++;
+            showFeedback(requiredGestures.length > 1 ? "Perfect combo! +1 ✓" : "Correct! +1 ✓", "correct");
+          } else {
+            showFeedback("Good! Do the second action!", "correct");
+          }
         }
         $gameScore.textContent = `Score: ${score}`;
       };
@@ -669,6 +743,7 @@
           peer.send(JSON.stringify({
             type: "command",
             gesture: null,
+            gestures: [],
             text: null,
             simon: false,
           }));

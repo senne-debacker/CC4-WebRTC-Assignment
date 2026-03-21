@@ -494,6 +494,24 @@ body::before {
   box-shadow: 0 0 0 1px rgba(46, 204, 113, 0.35);
 }
 
+.death-actions-hint {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.death-actions-hint.saved {
+  color: var(--green);
+}
+
+.btn-game-save {
+  background: linear-gradient(135deg, var(--gold), #b7950b);
+  color: #111;
+  box-shadow: 0 0 0 1px rgba(241, 196, 15, 0.35), 0 6px 24px rgba(241, 196, 15, 0.28);
+}
+
 .btn-game-return {
   background: linear-gradient(135deg, #1f2e46, #172233);
   box-shadow: 0 0 0 1px rgba(80, 104, 137, 0.35), 0 6px 22px rgba(0, 0, 0, 0.28);
