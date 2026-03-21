@@ -22,21 +22,27 @@
       <!-- Body -->
       <div class="lobby-body">
         <!-- Left: instructions -->
-        <div class="lobby-instructions">
-          <h2>How to Play</h2>
-          <div id="instructionsDefault">
-            <ol>
-              <li>Scan the QR code with your phone to connect</li>
-              <li>Tap <strong>Start Controller Mode</strong> on your phone</li>
-              <li>Press <strong>Start Game</strong> on your phone when ready</li>
-              <li>Follow the commands — but <em>only</em> when Simon says!</li>
-            </ol>
-          </div>
-          <div id="instructionsConnected" class="hidden">
-            <p>Controller connected.</p>
-            <p>Use your phone to start and play the game.</p>
-          </div>
-        </div>
+<div class="lobby-instructions">
+  <h2>How to Play</h2>
+
+  <div id="instructionsDefault">
+    <ol>
+      <li>Scan the QR code with your phone</li>
+      <li>Tap <strong>Start Controller</strong> on your phone</li>
+      <li>Press <strong>Start Game</strong> to begin when ready!</li>
+    </ol>
+  </div>
+
+  <div id="instructionsConnected" class="hidden">
+    <ol>
+      <li>Watch the screen for commands</li>
+      <li>Only act when you see <em>Simon says…</em></li>
+      <li>Wrong move or acting without Simon costs a life</li>
+      <li>Run out of lives and it's game over!</li>
+      <li>Watch out, it gets faster and faster!</li>
+    </ol>
+  </div>
+</div>
 
         <!-- Right: connection -->
         <div class="lobby-connect">
@@ -123,10 +129,6 @@
       </div>
 
       <div id="feedbackDisplay" class="feedback-display"></div>
-
-      <div class="camera-pip">
-        <video id="pipCamera" playsinline autoplay muted></video>
-      </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
