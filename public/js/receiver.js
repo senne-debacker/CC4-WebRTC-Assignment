@@ -23,7 +23,8 @@
       const $telemetryTapDot = document.getElementById("telemetryTapDot");
       const $telemetryTapStatus = document.getElementById("telemetryTapStatus");
       const $telemetryTapCount = document.getElementById("telemetryTapCount");
-      const $enableMusicBtn = document.getElementById("enableMusicBtn");
+      const $enableMusicToggle = document.getElementById("enableMusicToggle");
+      const $musicToggleLabel = document.getElementById("musicToggleLabel");
       const $gyroAlphaMarker = document.getElementById("gyroAlphaMarker");
       const $gyroBetaMarker = document.getElementById("gyroBetaMarker");
       const $gyroGammaMarker = document.getElementById("gyroGammaMarker");
@@ -103,11 +104,20 @@
         await playTrack(lobbyMusic, "Lobby music");
       };
 
-      const enableMusic = async () => {
-        musicEnabledByUser = true;
-        if ($enableMusicBtn) {
-          $enableMusicBtn.classList.add("enabled");
-          $enableMusicBtn.textContent = "Music enabled";
+      const setMusicEnabled = async (enabled) => {
+        musicEnabledByUser = !!enabled;
+
+        if ($enableMusicToggle) {
+          $enableMusicToggle.checked = musicEnabledByUser;
+        }
+
+        if ($musicToggleLabel) {
+          $musicToggleLabel.textContent = `Music: ${musicEnabledByUser ? "On" : "Off"}`;
+        }
+
+        if (!musicEnabledByUser) {
+          await syncMusicByState();
+          return;
         }
 
         // Unlock audio on first user gesture so later autoplay switching works.
@@ -500,8 +510,13 @@
 
       if ($otherCamera) $otherCamera.addEventListener("click", () => $otherCamera.play());
       if ($pipCamera) $pipCamera.addEventListener("click", () => $pipCamera.play());
-      if ($enableMusicBtn) $enableMusicBtn.addEventListener("click", enableMusic);
+      if ($enableMusicToggle) {
+        $enableMusicToggle.addEventListener("change", (e) => {
+          setMusicEnabled(!!e.target.checked);
+        });
+      }
 
       resetTelemetry();
+      setMusicEnabled(false);
 
       init();

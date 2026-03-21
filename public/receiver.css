@@ -178,34 +178,68 @@
   margin-bottom: 20px;
 }
 
-.btn-music-optin {
-  width: 100%;
+.music-toggle-row {
   margin-bottom: 18px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: 2px;
   border: 1px solid rgba(241, 196, 15, 0.3);
-  background: linear-gradient(135deg, rgba(241, 196, 15, 0.18), rgba(230, 126, 34, 0.2));
-  color: #fff;
+  background: linear-gradient(135deg, rgba(241, 196, 15, 0.12), rgba(230, 126, 34, 0.14));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.music-toggle-label {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  cursor: pointer;
-  transition: transform 0.12s, filter 0.12s, border-color 0.12s;
+  color: var(--text);
 }
 
-.btn-music-optin:hover {
-  filter: brightness(1.07);
-  border-color: rgba(241, 196, 15, 0.5);
+.music-switch {
+  position: relative;
+  width: 52px;
+  height: 30px;
+  display: inline-block;
 }
 
-.btn-music-optin:active {
-  transform: scale(0.98);
+.music-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
 }
 
-.btn-music-optin.enabled {
-  background: linear-gradient(135deg, rgba(46, 204, 113, 0.28), rgba(39, 174, 96, 0.28));
-  border-color: rgba(46, 204, 113, 0.55);
+.music-slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.music-slider::before {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  left: 3px;
+  top: 3px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s;
+}
+
+.music-switch input:checked + .music-slider {
+  background: rgba(46, 204, 113, 0.45);
+  border-color: rgba(46, 204, 113, 0.8);
+}
+
+.music-switch input:checked + .music-slider::before {
+  transform: translateX(22px);
 }
 
 /* Default instructions list */
