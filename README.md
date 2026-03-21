@@ -979,6 +979,43 @@ if (!commandArmed || activeCommandGesture !== "spin") {
 | **Description** | Added a 3-life system: every failed action removes one life, and the game ends when lives hit 0. Also added dynamic difficulty scaling: every 3 rounds, the action window and inter-round gap get shorter, making the game progressively harder. |
 | **AI Usage** | **Copilot** |
 
+### Day: 21-03-2026
+
+#### 1. Desktop confirmation trigger on phone connect
+| Section | Details |
+| :--- | :--- |
+| **Description** | Added a desktop-side confirmation trigger when a phone (sender) connects to the receiver. The receiver now shows a short, visible status badge in the lobby saying the phone connected successfully. A disconnect notice is also shown when the peer closes. |
+| **AI Usage** | **Copilot** |
+
+##### Question 01
+**Input**
+Allright, please add a trigger to sender. when a phone connects, it gets a confirm notification on the desktop. Don't forget the readme
+
+**Return**
+Added a transient desktop connection notice in the receiver lobby. On peer connect, the UI shows "Phone connected successfully ✓"; on peer close, it shows "Phone disconnected".
+
+**Code Snippet** — Receiver desktop confirmation notice
+```js
+const showConnectNotice = (text, type = "success") => {
+  if (!$connectNotice) return;
+  $connectNotice.textContent = text;
+  $connectNotice.className = `connect-notice ${type}`;
+  setTimeout(() => {
+    if ($connectNotice.textContent === text) {
+      $connectNotice.className = "connect-notice hidden";
+    }
+  }, 2600);
+};
+
+peer.on("connect", () => {
+  showConnectNotice("Phone connected successfully ✓", "success");
+});
+
+peer.on("close", () => {
+  showConnectNotice("Phone disconnected", "warning");
+});
+```
+
 ##### Question 01
 **Input**
 Okay, let's make some final changes, first of all, the player has 3 lives, if they fail three times, they die. Second of all, the timing is good, but we speed up the time every 3 levels, so it gets harder and harder
