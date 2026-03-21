@@ -26,6 +26,44 @@
   text-align: center;
 }
 
+.connection-status {
+  margin-top: 10px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.connection-status-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #a8b2d1;
+  letter-spacing: 0.02em;
+}
+
+.connection-status-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06) inset;
+}
+
+.connection-status-icon.disconnected {
+  background: #e74c3c;
+  box-shadow: 0 0 14px rgba(231, 76, 60, 0.45);
+}
+
+.connection-status-icon.connecting {
+  background: #f39c12;
+  box-shadow: 0 0 14px rgba(243, 156, 18, 0.45);
+}
+
+.connection-status-icon.connected {
+  background: #2ecc71;
+  box-shadow: 0 0 14px rgba(46, 204, 113, 0.45);
+}
+
 .lobby-body {
   display: grid;
   grid-template-columns: 1fr 340px;
@@ -94,6 +132,16 @@
   display: block;
   width: 100%;
   height: auto;
+}
+
+/* Small connected banner shown where the QR usually is */
+.connected-banner {
+  padding: 10px 14px;
+  background: linear-gradient(90deg, #2ecc71, #27ae60);
+  color: #041826;
+  font-weight: 800;
+  border-radius: 8px;
+  text-align: center;
 }
 
 .peer-bar {

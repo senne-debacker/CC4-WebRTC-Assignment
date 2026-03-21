@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Simon Says — Controller</title>
+    <title>Simon Says - Controller</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="sender.css" />
   </head>
@@ -18,6 +18,11 @@
       <div id="statusBar" class="status disconnected">Connecting to server…</div>
 
       <div id="peerInfo" class="peer-info">Looking for a receiver…</div>
+
+      <div id="phoneCommandDisplay" class="phone-command-display hidden">
+        <div id="phoneCommandPrefix" class="command-prefix"></div>
+        <div id="phoneCommandText" class="command-action">Waiting…</div>
+      </div>
 
       <button id="startSensorsBtn" class="btn-controller" disabled>
         Start Controller Mode

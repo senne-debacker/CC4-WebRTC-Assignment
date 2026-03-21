@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Simon Says — Receiver</title>
+    <title>Simon Says</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="receiver.css" />
   </head>
@@ -11,9 +11,12 @@
     <div id="lobbyScreen" class="lobby">
       <!-- Hero -->
       <div class="lobby-hero">
-        <h1 class="lobby-title">🎮 Simon Says</h1>
-        <p class="lobby-subtitle">The party game — use your phone as a controller!</p>
-        <div id="statusBar" class="status disconnected">Connecting…</div>
+        <h1 class="lobby-title">Welcome to Simon Says</h1>
+        <p class="lobby-subtitle">The party game that uses your phone as a controller!</p>
+        <div class="connection-status" role="status" aria-live="polite">
+          <div class="connection-status-title">Connection status</div>
+          <div id="connectionStatusIcon" class="connection-status-icon connecting" aria-label="Connecting"></div>
+        </div>
       </div>
 
       <!-- Body -->
@@ -21,24 +24,17 @@
         <!-- Left: instructions -->
         <div class="lobby-instructions">
           <h2>How to Play</h2>
-          <ol>
-            <li>Scan the QR code with your phone to connect</li>
-            <li>Tap <strong>Start Controller Mode</strong> on your phone</li>
-            <li>Press <strong>Start Game</strong> on your phone when ready</li>
-            <li>Follow the commands — but <em>only</em> when Simon says!</li>
-          </ol>
-          <div class="lobby-commands">
-            <h3>Commands</h3>
-            <div class="command-chips">
-              <span class="chip">🤳 Touch the screen</span>
-              <span class="chip">🦘 Jump</span>
-              <span class="chip">🦆 Duck</span>
-              <span class="chip">⬅️ Move left</span>
-              <span class="chip">➡️ Move right</span>
-              <span class="chip">🌀 Do a 360</span>
-              <span class="chip">📱 Shake your phone</span>
-              <span class="chip">🗣️ Say something</span>
-            </div>
+          <div id="instructionsDefault">
+            <ol>
+              <li>Scan the QR code with your phone to connect</li>
+              <li>Tap <strong>Start Controller Mode</strong> on your phone</li>
+              <li>Press <strong>Start Game</strong> on your phone when ready</li>
+              <li>Follow the commands — but <em>only</em> when Simon says!</li>
+            </ol>
+          </div>
+          <div id="instructionsConnected" class="hidden">
+            <p>Controller connected.</p>
+            <p>Use your phone to start and play the game.</p>
           </div>
         </div>
 
@@ -49,12 +45,6 @@
             <div id="qrcode"></div>
             <p id="urlDisplay"></p>
           </div>
-
-          <div class="lobby-preview">
-            <video id="otherCamera" playsinline autoplay></video>
-          </div>
-
-
         </div>
       </div>
     </div>
