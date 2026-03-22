@@ -28,19 +28,22 @@ Using microphone
 Using camera
 - ...
 
-## Planning
 
-### Week 01 
-**Monday:** test phone data like accelerometer and gyroscope
-**Tuesday:** start on basic html & think of more commands
-**Thursday:** add logic to show commands
 
-### Week 02
-| Dag | Focus | Taken |
-| :--- | :--- | :--- |
-| **Maandag** | **Sensor Tuning & UX** | Finetunen van drempelwaarden voor Jump/360 op fysieke hardware; Toevoegen van haptische feedback (vibratie) op de smartphone. |
-| **Dinsdag** | **Visuals & AI Rainbow** | HTML verder uitwerken om tot een volledig spel te komen met startscherm etc. |
-| **Donderdag** | **Robustness & Final Review** | Foutafhandeling optimaliseren (reconnect logica), opties toevoegen voor kalibratie en troubleshooting. |
+
+## Final AI Reflection
+
+### Content
+This project/game was entirely my own idea, AI had nothing to do with the concept, all the commands etc were human written. 
+
+### WebRTC
+For this project, I wanted to be sure I learned something about Websockets and WebRTC connections, that is why I really wanted to make sure I could do that myself before using any AI, I only resorted to AI when a tutorial was unclear, and used it to answer questions, not to generate code.
+
+### JS
+The JavaScript in this project was about uses a lot of AI, with the given time for this project, I knew that I would have to use AI if I wanted to have a good looking, finished project. Usually I would use AI to set up a functioning basis for a certain feature, and then adapt it to the game.
+
+### Styling
+The styling of this project was mainly done with AI, it created a very clean looking, professional base for the website, so I decided i didn't need to change too much. Aside from some little positioning and padding changes, most CSS is AI written.
 
 ## DevDiary
 
@@ -1202,27 +1205,3 @@ peer.on("close", () => {
   setConnectionState("disconnected");
 });
 ```
-
-## Human vs AI Overview (Final)
-
-Below is the final ownership overview. If ownership was unclear, it is treated as human-authored.
-
-### Mostly Human-Written
-- Core project concept and game direction (Simon Says flow and command rules)
-- WebRTC + WebSocket architecture choices and integration strategy
-- Tutorial-driven setup and adaptation to this project
-- Final gameplay behavior decisions and tuning acceptance/rejection
-- Bug triage decisions and manual validation process
-
-### AI-Assisted (Copilot / consult)
-- UI and styling polish passes for sender/receiver views
-- Boilerplate-heavy edits and refactor speedups
-- Some event-handler scaffolding and cleanup transformations
-- Drafting and restructuring parts of README diary text
-
-### AI-Generated Segments (then reviewed/edited)
-- Some gesture detection and command-loop scaffolding in earlier iterations
-- Some utility snippets used during rapid iteration
-
-### Final Reflection
-AI mainly helped with styling, repetitive refactors, and speeding up implementation. The networking model and core game structure were primarily human-led, using tutorials plus manual adaptation. When uncertain about ownership, this README assumes human authorship.

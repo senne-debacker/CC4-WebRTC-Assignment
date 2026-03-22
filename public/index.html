@@ -9,59 +9,76 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Simon Says</title>
+    <link rel="icon" type="image/svg+xml" href="/media/favicon.svg" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="receiver.css" />
   </head>
   <body>
     <div id="lobbyScreen" class="lobby">
-            <div class="lobby-hero">
+      <div class="lobby-hero">
         <h1 class="lobby-title">Welcome to Simon Says</h1>
-        <p class="lobby-subtitle">The party game that uses your phone as a controller!</p>
+        <p class="lobby-subtitle">
+          The party game that uses your phone as a controller!
+        </p>
         <div class="connection-status" role="status" aria-live="polite">
           <div class="connection-status-title">Connection status</div>
-          <div id="connectionStatusIcon" class="connection-status-icon connecting" aria-label="Connecting"></div>
+          <div
+            id="connectionStatusIcon"
+            class="connection-status-icon connecting"
+            aria-label="Connecting"
+          ></div>
         </div>
       </div>
 
-            <div class="lobby-body">
+      <div class="lobby-body">
         <div class="lobby-instructions">
-  <h2>How to Play</h2>
+          <h2>How to Play</h2>
 
-  <div class="music-toggle-row">
-    <span id="musicToggleLabel" class="music-toggle-label">Music: Off</span>
-    <label class="music-switch" for="enableMusicToggle" aria-label="Toggle music">
-      <input id="enableMusicToggle" type="checkbox" />
-      <span class="music-slider"></span>
-    </label>
-  </div>
+          <div class="music-toggle-row">
+            <span id="musicToggleLabel" class="music-toggle-label"
+              >Music: Off</span
+            >
+            <label
+              class="music-switch"
+              for="enableMusicToggle"
+              aria-label="Toggle music"
+            >
+              <input id="enableMusicToggle" type="checkbox" />
+              <span class="music-slider"></span>
+            </label>
+          </div>
 
-  <div id="instructionsDefault">
-    <ol>
-      <li>Scan the QR code with your phone</li>
-      <li>Tap <strong>Start Controller</strong> on your phone</li>
-      <li>Press <strong>Start Game</strong> to begin when ready!</li>
-    </ol>
-  </div>
+          <div id="instructionsDefault">
+            <ol>
+              <li>Scan the QR code with your phone</li>
+              <li>Tap <strong>Start Controller</strong> on your phone</li>
+              <li>Press <strong>Start Game</strong> to begin when ready!</li>
+            </ol>
+          </div>
 
-  <div id="instructionsConnected" class="hidden">
-    <ol>
-      <li>Watch the screen for commands</li>
-      <li>Only act when you see <em>Simon says…</em></li>
-      <li>Wrong move or acting without Simon costs a life</li>
-      <li>Run out of lives and it's game over!</li>
-      <li>Watch out, it gets faster and faster!</li>
-    </ol>
-  </div>
-</div>
+          <div id="instructionsConnected" class="hidden">
+            <ol>
+              <li>Watch the screen for commands</li>
+              <li>Only act when you see <em>Simon says…</em></li>
+              <li>Wrong move or acting without Simon costs a life</li>
+              <li>Run out of lives and it's game over!</li>
+              <li>Watch out, it gets faster and faster!</li>
+            </ol>
+          </div>
+        </div>
 
-                <div class="lobby-connect">
+        <div class="lobby-connect">
           <div id="qrSection" class="qr-section">
             <h2>Scan to Join</h2>
             <div id="qrcode"></div>
             <p id="urlDisplay"></p>
           </div>
 
-          <div id="telemetryPanel" class="telemetry-panel hidden" aria-live="polite">
+          <div
+            id="telemetryPanel"
+            class="telemetry-panel hidden"
+            aria-live="polite"
+          >
             <h2>Controller Telemetry</h2>
 
             <div class="telemetry-grid">
@@ -77,26 +94,38 @@
                 <div class="telemetry-label">Tap Registration</div>
                 <div class="tap-indicator-row">
                   <div id="telemetryTapDot" class="tap-dot"></div>
-                  <div id="telemetryTapStatus" class="telemetry-value">Idle</div>
+                  <div id="telemetryTapStatus" class="telemetry-value">
+                    Idle
+                  </div>
                 </div>
-                <div id="telemetryTapCount" class="telemetry-subvalue">Count: 0</div>
+                <div id="telemetryTapCount" class="telemetry-subvalue">
+                  Count: 0
+                </div>
               </div>
 
               <div class="telemetry-card telemetry-card-wide">
-                <div class="telemetry-label">Gyroscope (alpha / beta / gamma)</div>
+                <div class="telemetry-label">
+                  Gyroscope (alpha / beta / gamma)
+                </div>
                 <div class="axis-row">
                   <span class="axis-name">A</span>
-                  <div class="axis-track"><div id="gyroAlphaMarker" class="axis-marker"></div></div>
+                  <div class="axis-track">
+                    <div id="gyroAlphaMarker" class="axis-marker"></div>
+                  </div>
                   <span id="gyroAlphaValue" class="axis-value">0.0°</span>
                 </div>
                 <div class="axis-row">
                   <span class="axis-name">B</span>
-                  <div class="axis-track"><div id="gyroBetaMarker" class="axis-marker"></div></div>
+                  <div class="axis-track">
+                    <div id="gyroBetaMarker" class="axis-marker"></div>
+                  </div>
                   <span id="gyroBetaValue" class="axis-value">0.0°</span>
                 </div>
                 <div class="axis-row">
                   <span class="axis-name">G</span>
-                  <div class="axis-track"><div id="gyroGammaMarker" class="axis-marker"></div></div>
+                  <div class="axis-track">
+                    <div id="gyroGammaMarker" class="axis-marker"></div>
+                  </div>
                   <span id="gyroGammaValue" class="axis-value">0.0°</span>
                 </div>
               </div>
@@ -105,32 +134,38 @@
                 <div class="telemetry-label">Accelerometer (x / y / z)</div>
                 <div class="axis-row">
                   <span class="axis-name">X</span>
-                  <div class="axis-track"><div id="accelXMarker" class="axis-marker"></div></div>
+                  <div class="axis-track">
+                    <div id="accelXMarker" class="axis-marker"></div>
+                  </div>
                   <span id="accelXValue" class="axis-value">0.00</span>
                 </div>
                 <div class="axis-row">
                   <span class="axis-name">Y</span>
-                  <div class="axis-track"><div id="accelYMarker" class="axis-marker"></div></div>
+                  <div class="axis-track">
+                    <div id="accelYMarker" class="axis-marker"></div>
+                  </div>
                   <span id="accelYValue" class="axis-value">0.00</span>
                 </div>
                 <div class="axis-row">
                   <span class="axis-name">Z</span>
-                  <div class="axis-track"><div id="accelZMarker" class="axis-marker"></div></div>
+                  <div class="axis-track">
+                    <div id="accelZMarker" class="axis-marker"></div>
+                  </div>
                   <span id="accelZValue" class="axis-value">0.00</span>
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <div class="lobby-leaderboard" aria-live="polite">
-            <h2>Top Scores</h2>
-            <ol id="lobbyScoreboard" class="lobby-scoreboard"></ol>
-          </div>
+        <div class="lobby-leaderboard" aria-live="polite">
+          <h2>Top Scores</h2>
+          <ol id="lobbyScoreboard" class="lobby-scoreboard"></ol>
         </div>
       </div>
     </div>
 
-        <div id="gameScreen" class="game-screen">
+    <div id="gameScreen" class="game-screen">
       <div class="game-header">
         <div id="gameScore" class="game-score">Score: 0</div>
         <div id="gameRound" class="game-round"></div>
@@ -141,10 +176,18 @@
         </div>
       </div>
 
+      <div id="commandTimer" class="command-timer" aria-hidden="true">
+        <div id="commandTimerFill" class="command-timer-fill"></div>
+      </div>
+
       <div class="command-display">
         <div id="commandPrefix" class="command-prefix"></div>
         <div id="commandAction" class="command-action">Get Ready…</div>
-        <div id="startCountdown" class="start-countdown hidden" aria-hidden="true">
+        <div
+          id="startCountdown"
+          class="start-countdown hidden"
+          aria-hidden="true"
+        >
           <span class="count-dot"></span>
           <span class="count-dot"></span>
           <span class="count-dot"></span>
@@ -167,7 +210,8 @@
         <ol id="deathScoreboard" class="death-scoreboard"></ol>
 
         <p class="death-hint">
-          Use your phone to choose <strong>Return to Lobby</strong> or <strong>Play Again</strong>.
+          Use your phone to choose <strong>Return to Lobby</strong> or
+          <strong>Play Again</strong>.
         </p>
       </div>
     </div>

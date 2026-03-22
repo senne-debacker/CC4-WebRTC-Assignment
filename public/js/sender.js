@@ -41,6 +41,31 @@ let activeDeathToken = null;
 let deathScoreSaved = false;
 const COMMAND_ARM_DELAY = 350;
 const PLAYER_NAME_STORAGE_KEY = "simonSaysPlayerNameV1";
+const COMMAND_EMOJI_MAP = {
+  left: "⬅️",
+  right: "➡️",
+  jump: "⬆️",
+  duck: "⬇️",
+  shake: "↔️",
+  spin: "🔄",
+  speech: "🗣️",
+  "tap-red": "🟥",
+  "tap-yellow": "🟨",
+  "tap-green": "🟩",
+  "tap-blue": "🟦",
+};
+
+const getPhoneCommandDisplayText = (gestures, fallbackText) => {
+  const emojiParts = (Array.isArray(gestures) ? gestures : [])
+    .map((g) => COMMAND_EMOJI_MAP[String(g)] || "")
+    .filter(Boolean);
+
+  if (emojiParts.length > 0) {
+    return emojiParts.join(" + ");
+  }
+
+  return String(fallbackText || "Waiting…");
+};
 
 const sendPeerMessage = (message) => {
   if (peer && peer.connected) {
@@ -293,7 +318,7 @@ const createPeer = (initiator, peerId) => {
 
       if (msg.text) {
         $phoneCommandPrefix.textContent = msg.simon ? "Simon says…" : "";
-        $phoneCommandText.textContent = msg.text;
+        $phoneCommandText.textContent = getPhoneCommandDisplayText(nextGestures, msg.text);
         $phoneCommandDisplay.classList.remove("hidden");
       } else {
         $phoneCommandDisplay.classList.add("hidden");

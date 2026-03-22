@@ -13,6 +13,8 @@
       const $gameScore      = document.getElementById("gameScore");
       const $gameRound      = document.getElementById("gameRound");
       const $gameLives      = document.getElementById("gameLives");
+      const $commandTimer   = document.getElementById("commandTimer");
+      const $commandTimerFill = document.getElementById("commandTimerFill");
       const $startCountdown = document.getElementById("startCountdown");
       const $deathFinalScore = document.getElementById("deathFinalScore");
       const $deathScoreboard = document.getElementById("deathScoreboard");
@@ -67,16 +69,20 @@
         "jump", "duck", "left", "right", "spin", "shake"
       ].includes(c.gesture));
       const HARD_MODE_SCORE = 15;
+      const SIMON_SAYS_CHANCE = 0.65;
+      const MAX_NO_SIMON_STREAK = 2;
 
       let gameActive = false;
       let commandTimer = null;
       let roundTimer = null;
       let introTimers = [];
+      let commandTimerDangerTimeout = null;
       let score = 0;
       let lives = 3;
       let round = 0;
       let currentCommand = null;
       let simonSays = false;
+      let noSimonStreak = 0;
       let roundResolved = false;
       let performedGestures = new Set();
       let commandBag = [];
@@ -214,8 +220,10 @@
           if (!gameActive) return;
           resetStartCountdown();
           nextCommand();
-        }, 6400));
+        }, INTRO_TOTAL_MS));
       };
+
+      const INTRO_TOTAL_MS = 6400;
 
       const BASE_ACTION_MS = 3000;
       const BASE_GAP_MS = 2000;
@@ -681,6 +689,7 @@
         score = 0;
         lives = 3;
         round = 0;
+        noSimonStreak = 0;
         refillCommandBag();
         if ($deathScreen) {
           $deathScreen.classList.remove("active");
@@ -692,9 +701,41 @@
         $feedbackDisplay.className = "feedback-display";
         $gameScore.textContent = "Score: 0";
         $gameRound.textContent = "";
+        hideCommandTimerBar();
+        resetCommandTimerBar();
         renderLives();
         syncMusicByState();
         startIntroAnimation();
+      };
+
+      const showCommandTimerBar = () => {
+        if ($commandTimer) $commandTimer.classList.add("active");
+      };
+
+      const hideCommandTimerBar = () => {
+        if ($commandTimer) $commandTimer.classList.remove("active");
+      };
+
+      const resetCommandTimerBar = () => {
+        if (commandTimerDangerTimeout) {
+          clearTimeout(commandTimerDangerTimeout);
+          commandTimerDangerTimeout = null;
+        }
+        if (!$commandTimerFill) return;
+        $commandTimerFill.style.transition = "none";
+        $commandTimerFill.style.transform = "scaleX(1)";
+        $commandTimerFill.classList.remove("danger");
+      };
+
+      const startCommandTimerBar = (durationMs) => {
+        if (!$commandTimerFill || !durationMs || durationMs <= 0) return;
+        resetCommandTimerBar();
+        void $commandTimerFill.offsetWidth;
+        $commandTimerFill.style.transition = `transform ${durationMs}ms linear`;
+        $commandTimerFill.style.transform = "scaleX(0)";
+        commandTimerDangerTimeout = setTimeout(() => {
+          if ($commandTimerFill) $commandTimerFill.classList.add("danger");
+        }, Math.floor(durationMs * 0.75));
       };
 
       const nextCommand = () => {
@@ -708,7 +749,12 @@
 
         if (commandBag.length === 0) refillCommandBag();
         const cmd = commandBag.pop();
-        simonSays = Math.random() >= 0.5;
+        if (noSimonStreak >= MAX_NO_SIMON_STREAK) {
+          simonSays = true;
+        } else {
+          simonSays = Math.random() < SIMON_SAYS_CHANCE;
+        }
+        noSimonStreak = simonSays ? 0 : noSimonStreak + 1;
         const hardMode = score >= HARD_MODE_SCORE;
         if (hardMode) {
           const colorCmd = COLOR_COMMANDS[Math.floor(Math.random() * COLOR_COMMANDS.length)];
@@ -742,6 +788,8 @@
         $gameScore.textContent = `Score: ${score}`;
         $feedbackDisplay.textContent = "";
         $feedbackDisplay.className = "feedback-display";
+        showCommandTimerBar();
+        startCommandTimerBar(actionMs);
 
         roundTimer = setTimeout(() => {
           if (!gameActive) return;
@@ -815,6 +863,8 @@
         clearTimeout(roundTimer);
         clearIntroTimers();
         resetStartCountdown();
+        hideCommandTimerBar();
+        resetCommandTimerBar();
 
         if (peer && peer.connected) {
           peer.send(JSON.stringify({
