@@ -23,36 +23,36 @@ const port = process.env.PORT || 443;
 
 app.use(express.static('public'));
 
-app.get('/api/ip', (req, res) => {
+const getNetworkIp = () => {
   const interfaces = os.networkInterfaces();
-  let localIp = 'localhost';
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
       if (iface.family === 'IPv4' && !iface.internal) {
-        localIp = iface.address;
-        break;
+        return iface.address;
       }
     }
+  }
+  return null;
+};
+
+app.get('/api/ip', (req, res) => {
+  const localIp = getNetworkIp();
+  if (!localIp) {
+    return res.status(503).json({ error: 'No network IPv4 address found' });
   }
   const protocol = isDevelopment ? 'https' : 'http';
   res.json({ ip: localIp, port, url: `${protocol}://${localIp}:${port}` });
 });
 
 server.listen(port, () => {
-  const interfaces = os.networkInterfaces();
-  let localIp = 'localhost';
-  for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) {
-        localIp = iface.address;
-        break;
-      }
-    }
-  }
+  const localIp = getNetworkIp();
   const protocol = isDevelopment ? 'https' : 'http';
   console.log(`App listening on port ${port}!`);
-  console.log(`Local:   ${protocol}://localhost:${port}`);
-  console.log(`Network: ${protocol}://${localIp}:${port}`);
+  if (localIp) {
+    console.log(`Network: ${protocol}://${localIp}:${port}`);
+  } else {
+    console.warn('Network: unavailable (no non-internal IPv4 found)');
+  }
 });
 
 const { Server } = require("socket.io");
